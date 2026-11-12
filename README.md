@@ -1,152 +1,398 @@
-# SkillSync — Skill-Based Career Matching Platform (Frontend)
+# SkillSync — Skill-Based Career Matching Platform
 
-SkillSync is a modern, responsive frontend single-page web application built with **React.js**, **Tailwind CSS**, **React Router v6**, **Lucide Icons**, and **Recharts**. It empowers students and job seekers to assess career readiness, discover compatible roles and top technology employers, perform deep skill-gap analyses, and pursue personalized 5-phase learning roadmaps.
+SkillSync is a full-stack career matching platform designed to help students and job seekers assess their career readiness, discover compatible job roles and technology companies, identify skill gaps, and follow personalized learning roadmaps.
 
-> **Architecture Constraint Met:** SkillSync is entirely frontend-only. All session states, user skills, bookmarked employers, matching results, and interactive roadmap progress are calculated dynamically on the client and persisted in browser `localStorage`. No backend APIs, Node.js servers, or MongoDB databases are required.
+The application combines a modern React frontend with **Supabase authentication and database services**, alongside a **Node.js and Express backend API**.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Simulated Demo Authentication
-- **Login Screen (`/login`)**: Email/password authentication, show/hide password toggle, input validation, and a one-click **"Use Demo Account"** quick-fill button (`demo@skillsync.app` / `demo123`).
-- **Registration Screen (`/register`)**: Name, email, password, confirm password, 5-bar live password strength evaluator, and instant mismatch detection.
-- **Forgot Password Screen (`/forgot-password`)**: Client-side simulated password recovery workflow.
-- **Session Persistence**: Maintained via `skillsync_session` in `localStorage` with full sign-out support.
+### 1. User Authentication
+- User registration with name, email, and password.
+- Secure email/password login using Supabase Authentication.
+- Email verification support.
+- Forgot password and password reset functionality.
+- Persistent authenticated sessions.
+- Protected application routes.
+- User profile creation linked to authenticated accounts.
 
-### 2. Candidate Dashboard (`/dashboard`)
-- Personalized greeting and quick-action buttons: *Add Skills*, *Explore Companies*, *Matching Roles*, *Roadmaps*.
-- Real-time stat metrics: **Total Skills Added**, **Matching Companies**, **Top Match %**, and **Roadmap Completion Progress**.
-- Top Matched Role & Company Spotlight with compatibility badge and key metrics.
-- Recharts category distribution bar chart and proficiency count cards (*Advanced*, *Intermediate*, *Beginner*).
-- Highlight of *Skills to Improve*, *Upcoming Roadmap Milestones*, *Recent Activity*, and *Notifications Preview*.
+### 2. Candidate Dashboard
+- Personalized welcome dashboard.
+- Total skills and career matching overview.
+- Top matched job role and company.
+- Skill-gap metrics and roadmap completion progress.
+- Recommended jobs based on current skills.
+- Skills that need improvement.
 
-### 3. Comprehensive Skills Management (`/skills`)
-- Searchable autocomplete catalog input covering 60+ skills across 9 categories (*Web Development*, *Programming Languages*, *Databases*, *DSA*, *AI/ML*, *Cloud & DevOps*, *Mobile*, *Soft Skills*, *Tools*).
-- Support for adding custom user skills with custom categories.
-- Multi-tier proficiency toggle: **Beginner**, **Intermediate**, **Advanced**.
-- Live inline proficiency editor and skill removal.
-- Filter and search bar by name, category pills, and proficiency level.
+### 3. Comprehensive Skills Management
+- Searchable skills catalog covering multiple technical and professional categories.
+- Add skills to a personal skill inventory.
+- Custom skill proficiency levels:
+  - Beginner
+  - Intermediate
+  - Advanced
+- Update proficiency levels.
+- Remove skills.
+- Persistent skill data associated with the authenticated user.
 
-### 4. Company Discovery (`/companies` & `/companies/:companyId`)
-- Dual-mode discovery:
-  - **Find Companies by Skills**: Employers ranked by role compatibility score, displaying matching vs. missing skill counts, Glassdoor ratings, open roles, and favorite bookmarking.
-  - **Browse Directory**: Grid of tech employers (*Google, Microsoft, Amazon, Meta, Apple, Netflix, Infosys, TCS, Wipro, Cognizant, Flipkart, Swiggy*).
-- Filters for industry, category, and interactive **Minimum Match % slider**.
-- Company Profile pages featuring open job role breakdowns, corporate overview, culture pillars, fast facts, and direct role analysis links.
-- Clearly labeled illustrative mock hiring benchmark disclaimers.
+### 4. Company Discovery
+- Discover technology employers based on skill compatibility.
+- Browse company directory.
+- Explore company profiles and available roles.
+- View company information, industry, ratings, and other details.
+- Bookmark companies for later reference.
 
-### 5. Role Matching & Gap Analysis (`/matches` & `/roles/:roleId`)
-- All roles ranked by compatibility using the formula:
-  $$\text{Match Percentage} = \left(\frac{\text{Matching Required Skills}}{\text{Total Required Skills}}\right) \times 100$$
-- 3-Column granular skill breakdown:
-  - **Skills You Have** (Green): Skills meeting or exceeding target requirements.
-  - **Skills to Improve** (Yellow): Possessed skills that require proficiency advancement.
-  - **Missing Skills** (Red): Unmet core requirements.
-- Side-by-side table of all role requirements comparing required proficiency against candidate level.
-- Live recalculation as the candidate adds or updates skills in their profile.
+### 5. Role Matching and Skill-Gap Analysis
+- Job roles ranked by compatibility with the user's current skills.
+- Matching percentage calculated using:
 
-### 6. Personalized 5-Phase Learning Roadmap (`/roadmaps` & `/roadmaps/:roadmapId`)
-- Custom roadmaps dynamically generated from missing and improvable skills:
-  1. **Phase 1: Fundamentals**
-  2. **Phase 2: Core Technical Skills**
-  3. **Phase 3: Frameworks and Advanced Concepts**
-  4. **Phase 4: Projects and Practical Experience**
-  5. **Phase 5: Interview Preparation**
-- Each task includes task title, description, curated free/paid learning resource link, estimated duration, priority badge (*High*, *Medium*, *Low*), and interactive completion checkboxes.
-- Milestone tracking with progress bars, pending/completed task filters, and editable target completion dates.
+  \[
+  \text{Match Percentage} =
+  \frac{\text{Matching Required Skills}}{\text{Total Required Skills}}
+  \times 100
+  \]
 
-### 7. Saved Items & Multi-Role Comparison (`/saved`)
-- Bookmarks for companies, roles, and generated roadmaps.
-- **Side-by-side Role Comparison Matrix**: Select up to 3 roles simultaneously to compare match score, compensation ranges, total core skill counts, matching competencies, improvable skills, and missing gaps in a unified table.
+- Categorization of skills into:
+  - Skills You Have
+  - Skills to Improve
+  - Missing Skills
+- Detailed comparison between required and current proficiency levels.
 
-### 8. Notification Center (`/notifications`)
-- Bell icon with live unread badge count in sidebar and header.
-- Automated client-triggered notifications when new skills are added, roadmaps generated, or milestones achieved.
-- Mark as read, mark all read, dismiss notification, and filter between *All* and *Unread*.
+### 6. Personalized Learning Roadmaps
+- Generate personalized five-phase learning roadmaps.
+- Roadmaps are based on missing and improvable skills.
+- Five learning phases:
+  1. Fundamentals
+  2. Core Technical Skills
+  3. Frameworks and Advanced Concepts
+  4. Projects and Practical Experience
+  5. Interview Preparation
+- Learning resources and estimated durations for milestones.
+- Interactive task-completion checkboxes.
+- Progress tracking and target completion dates.
+- Roadmaps and completed milestones persist in the database.
 
-### 9. Profile & Settings (`/profile` & `/settings`)
-- Editable candidate profile: headline, education, experience tier, bio, social links, career interests, target companies, and roles.
-- Dark and Light theme toggle (persisted via Tailwind CSS `dark` class).
-- Notification preference switches and salary display settings.
-- Data export (backup as JSON download) and factory demo reset options.
+### 7. Saved Items and Role Comparison
+- Bookmark companies and job roles.
+- Save generated roadmaps.
+- View saved items in one place.
+- Compare up to three job roles using a side-by-side comparison matrix.
+
+### 8. Notification Center
+- Notifications for relevant application activities.
+- Unread notification indicators.
+- Mark notifications as read.
+- Mark all notifications as read.
+- Dismiss notifications.
+- Persistent notification data.
+
+### 9. Profile and Settings
+- Editable candidate profile.
+- Personal information and professional headline.
+- Education and experience details.
+- Professional summary and location.
+- LinkedIn and GitHub links.
+- Career interests, target companies, and target roles.
+- Light and dark theme preferences.
+- Data export functionality.
 
 ---
 
-## 🛠️ Project Structure
+## 🛠️ Technology Stack
 
+### Frontend
+| Technology | Purpose |
+|---|---|
+| React 18 | User interface |
+| Vite | Development server and build tool |
+| Tailwind CSS | Styling and responsive design |
+| React Router | Application routing |
+| Supabase JavaScript Client | Authentication and database access |
+| Lucide React | Icons |
+| Recharts | Data visualization |
+
+### Backend
+| Technology | Purpose |
+|---|---|
+| Node.js | JavaScript runtime |
+| Express.js | Backend API framework |
+| Supabase | Backend-as-a-Service |
+| PostgreSQL | Relational database |
+| Supabase Auth | User authentication |
+| Row Level Security (RLS) | Database access control |
+| dotenv | Environment variable management |
+| CORS | Cross-origin request configuration |
+
+---
+
+## 🏗️ Backend Architecture
+
+SkillSync uses Supabase for authentication, database storage, and user-specific data management.
+
+The React frontend communicates directly with Supabase through the Supabase JavaScript client.
+
+A separate Express.js server provides the backend API and a Supabase connectivity health-check endpoint.
+
+### Architecture Overview
+
+```text
+                  SkillSync Application
+                          |
+             +------------+------------+
+             |                         |
+        React Frontend             Express API
+             |                         |
+       Supabase JS Client          Node.js Server
+             |                         |
+             +------------+------------+
+                          |
+                       Supabase
+                          |
+              +-----------+-----------+
+              |           |           |
+          PostgreSQL   Supabase     Storage
+           Database      Auth
 ```
+
+### Authentication
+
+Supabase Authentication manages:
+- User registration.
+- Email/password login.
+- Email verification.
+- Password recovery.
+- Authenticated sessions.
+- User identity.
+
+Each registered user has a corresponding profile record linked to their authentication ID.
+
+### Database
+
+PostgreSQL is used to store application data.
+
+The database includes the following main tables:
+
+| Table | Purpose |
+|---|---|
+| `profiles` | User profile information and roles |
+| `skills` | Available skills catalog |
+| `skill_categories` | Skill categories |
+| `user_skills` | Skills associated with individual users |
+| `companies` | Company information |
+| `job_roles` | Available job roles |
+| `company_roles` | Relationships between companies and roles |
+| `role_skills` | Skills required for job roles |
+| `user_bookmarks` | Saved companies and roles |
+| `user_roadmaps` | Personalized learning roadmaps and progress |
+| `user_notifications` | User notifications |
+| `recently_viewed` | Recently viewed application items |
+
+### User Data Security
+
+Row Level Security (RLS) policies are configured for user-specific tables.
+
+These policies restrict users to accessing their own personal records.
+
+Additional database permissions restrict sensitive profile updates, including changes to the user's role.
+
+Public catalog data, such as company and job information, is made available through database access policies.
+
+---
+
+## 🌐 Express Backend API
+
+The Express server is located in the `server/` directory.
+
+### Available Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | Checks whether the SkillSync API is running |
+| GET | `/api/health/supabase` | Checks connectivity with Supabase Storage |
+
+### Example API Response
+
+A successful request to `/api/health/supabase` returns:
+
+```json
+{
+  "success": true,
+  "message": "Successfully connected to Supabase!",
+  "bucketsFound": 0
+}
+```
+
+The bucket count depends on the configured Supabase Storage project.
+
+---
+
+## 📁 Project Structure
+
+```text
 skillsync/
-├── index.html
-├── package.json
-├── vite.config.js
-├── tailwind.config.js
-├── postcss.config.js
+│
+├── server/
+│   ├── index.js
+│   ├── supabase.js
+│   ├── package.json
+│   └── package-lock.json
+│
 ├── src/
-│   ├── main.jsx                     # Application bootstrap
-│   ├── App.jsx                      # Providers & router root
-│   ├── index.css                    # Tailwind design system & utilities
 │   ├── components/
 │   │   └── ui/
-│   │       ├── EmptyState.jsx       # Reusable empty state view
-│   │       ├── LoadingSkeleton.jsx  # Card & list shimmer skeletons
-│   │       ├── MatchBadge.jsx       # Color-coded match percentage badge
-│   │       ├── Modal.jsx            # Accessible dialog modal
-│   │       ├── ProgressBar.jsx      # Progress bar with color variants
-│   │       └── SkillTag.jsx         # Interactive skill tag with remove action
 │   ├── context/
-│   │   ├── AppContext.jsx           # Global state (skills, roadmaps, saves, notifications, theme)
-│   │   └── AuthContext.jsx          # Client-side demo session management
+│   │   ├── AppContext.jsx
+│   │   └── AuthContext.jsx
 │   ├── data/
-│   │   ├── companies.js             # 12 detailed mock tech employer profiles
-│   │   ├── notifications.js         # Starter activity notifications
-│   │   ├── resources.js             # Curated documentation, courses, & books
-│   │   ├── roles.js                 # 15 tech roles with skill requirements
-│   │   └── skills.js                # 60+ skills catalog with categories
 │   ├── hooks/
-│   │   └── useLocalStorage.js       # Generic localStorage synchronization hook
 │   ├── layouts/
-│   │   ├── AuthLayout.jsx           # Clean centered auth layout with branding
-│   │   └── DashboardLayout.jsx      # Responsive desktop sidebar + mobile drawer layout
+│   ├── lib/
+│   │   └── supabase.js
 │   ├── pages/
-│   │   ├── DashboardPage.jsx        # Candidate overview & analytics
-│   │   ├── SkillsPage.jsx           # Skills inventory, proficiency editor, & catalog
-│   │   ├── CompaniesPage.jsx        # Company discovery & skill compatibility
-│   │   ├── CompanyDetailPage.jsx    # Company specs & open roles
-│   │   ├── MatchesPage.jsx          # Role matching recommendation feed
-│   │   ├── RoleDetailPage.jsx       # 3-tier gap analysis & roadmap trigger
-│   │   ├── RoadmapsPage.jsx         # Saved learning roadmaps directory
-│   │   ├── RoadmapDetailPage.jsx    # Interactive 5-phase checklist & target dates
-│   │   ├── SavedPage.jsx            # Bookmarks & 3-role side-by-side comparison
-│   │   ├── NotificationsPage.jsx    # Notification center
-│   │   ├── ProfilePage.jsx          # Editable candidate profile
-│   │   ├── SettingsPage.jsx         # Theme, preferences, & data export
 │   │   └── auth/
-│   │       ├── LoginPage.jsx        # Demo sign-in
-│   │       ├── RegisterPage.jsx     # Registration & strength meter
-│   │       └── ForgotPasswordPage.jsx # Password recovery simulation
 │   ├── routes/
-│   │   └── index.jsx                # Protected & public routes
-│   └── utils/
-│       ├── matching.js              # Skill overlap & categorization algorithms
-│       └── roadmap.js               # 5-phase personalized curriculum generator
+│   ├── utils/
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+│
+├── .env                 # Local environment variables (not committed)
+├── .gitignore
+├── index.html
+├── package.json
+├── package-lock.json
+├── tailwind.config.js
+├── postcss.config.js
+├── vite.config.js
+└── README.md
 ```
 
 ---
 
-## 💻 How to Run Locally
+## 💻 Installation and Setup
 
 ### Prerequisites
-- Node.js (v18 or higher recommended; v24 installed)
-- npm or pnpm
 
-### Quick Start
+- Node.js (v18 or later recommended).
+- npm.
+- A Supabase account and project.
+
+### 1. Clone the Repository
+
 ```bash
-# 1. Navigate to the project directory
-cd "C:\Users\Rishwick\.gemini\antigravity\scratch\skillsync"
+git clone https://github.com/Rishwick-12/SkillSync.git
+cd SkillSync
+```
 
-# 2. Start the local Vite development server
+### 2. Install Frontend Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Frontend Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_publishable_key
+```
+
+Replace the placeholder values with the URL and publishable key from your Supabase project.
+
+### 4. Configure Supabase
+
+Create the required database tables, relationships, permissions, and Row Level Security policies in your Supabase project.
+
+Configure Supabase Authentication with email/password authentication and email verification.
+
+The frontend requires the database schema and policies described in the Backend Architecture section.
+
+### 5. Start the Frontend
+
+From the project root:
+
+```bash
 npm run dev
 ```
 
-Open your browser at `http://localhost:5173`. You can immediately sign in with the prefilled demo account or click **"Use Demo Account"** on the login page!
+Open the local Vite URL displayed in the terminal, usually:
+
+`http://localhost:5173`
+
+### 6. Configure the Express Backend
+
+Open a second terminal:
+
+```bash
+cd server
+npm install
+```
+
+Create a `.env` file inside the `server/` directory:
+
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SECRET_KEY=your_supabase_secret_key
+PORT=5000
+```
+
+Use your Supabase project's secret key for the server-side configuration. Never expose this key in frontend code or commit it to GitHub.
+
+### 7. Start the Backend Server
+
+From the `server/` directory:
+
+```bash
+npm run dev
+```
+
+The Express server starts on port `5000` by default.
+
+Test the API:
+
+- `http://localhost:5000/`
+- `http://localhost:5000/api/health/supabase`
+
+---
+
+## 🔐 Environment Variable Security
+
+SkillSync uses separate environment configurations for its frontend and backend.
+
+| Variable | Location | Purpose |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Root `.env` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Root `.env` | Frontend publishable key |
+| `SUPABASE_URL` | `server/.env` | Server-side Supabase project URL |
+| `SUPABASE_SECRET_KEY` | `server/.env` | Server-side secret key |
+
+**Important:**
+- Never commit `.env` files.
+- Never expose Supabase secret keys in frontend code.
+- Keep server-side credentials exclusively in the backend environment.
+- The repository includes `.gitignore` rules to exclude local environment files.
+
+---
+
+## 📌 Project Status
+
+SkillSync currently includes:
+
+- React frontend and responsive application interface.
+- Supabase authentication integration.
+- User profile management.
+- PostgreSQL database integration.
+- Persistent skills, bookmarks, roadmaps, and notifications.
+- Row Level Security policies for user-specific data.
+- Express backend API with Supabase connectivity check.
+
+---
+
+## 👨‍💻 Repository
+
+GitHub: https://github.com/Rishwick-12/SkillSync
+
+**SkillSync — Build your skills. Discover your career.**
