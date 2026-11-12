@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
 import AuthLayout from '../layouts/AuthLayout';
 import DashboardLayout from '../layouts/DashboardLayout';
 
@@ -11,8 +13,9 @@ import HomePage from '../pages/HomePage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 
-// Dashboard pages  
+// Dashboard pages
 import DashboardPage from '../pages/DashboardPage';
 import SkillsPage from '../pages/SkillsPage';
 import CompaniesPage from '../pages/CompaniesPage';
@@ -28,34 +31,71 @@ import SettingsPage from '../pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
   const { currentUser, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center animate-pulse">
-          <span className="text-white font-bold text-xl">S</span>
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center animate-pulse">
+            <span className="text-white font-bold text-xl">S</span>
+          </div>
+          <p className="text-slate-500 text-sm">Loading SkillSync...</p>
         </div>
-        <p className="text-slate-500 text-sm">Loading SkillSync...</p>
       </div>
-    </div>
-  );
-  if (!currentUser) return <Navigate to="/login" replace />;
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
   return children;
 }
 
 export default function AppRoutes() {
   const { currentUser } = useAuth();
-  
+
   return (
     <Routes>
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
-        <Route path="/login" element={currentUser ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
-        <Route path="/register" element={currentUser ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route
+          path="/login"
+          element={
+            currentUser
+              ? <Navigate to="/dashboard" replace />
+              : <LoginPage />
+          }
+        />
+
+        <Route
+          path="/register"
+          element={
+            currentUser
+              ? <Navigate to="/dashboard" replace />
+              : <RegisterPage />
+          }
+        />
+
+        <Route
+          path="/forgot-password"
+          element={<ForgotPasswordPage />}
+        />
+
+        <Route
+          path="/reset-password"
+          element={<ResetPasswordPage />}
+        />
       </Route>
 
       {/* Dashboard Routes */}
-      <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/companies" element={<CompaniesPage />} />

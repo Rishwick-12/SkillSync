@@ -1,3 +1,4 @@
+
 export const skillCategories = {
   'Programming Languages': { color: 'blue', icon: 'Code' },
   'Web Development': { color: 'purple', icon: 'Globe' },
@@ -60,6 +61,7 @@ export const skillsCatalog = [
   { id: 'networking', name: 'Networking', category: 'DSA & CS Fundamentals', aliases: ['TCP/IP', 'HTTP', 'DNS', 'Computer Networks'] },
   { id: 'oops', name: 'OOP Concepts', category: 'DSA & CS Fundamentals', aliases: ['Object Oriented Programming', 'OOP', 'OOPS'] },
   { id: 'dbms', name: 'DBMS', category: 'DSA & CS Fundamentals', aliases: ['Database Management System', 'ACID', 'Transactions', 'Normalization'] },
+  { id: 'distributed-systems', name: 'Distributed Systems', category: 'DSA & CS Fundamentals', aliases: ['Distributed Computing', 'Microservices Architecture'] },
 
   // AI & Machine Learning
   { id: 'machine-learning', name: 'Machine Learning', category: 'AI & Machine Learning', aliases: ['ML', 'Supervised Learning', 'Unsupervised Learning'] },
@@ -73,6 +75,7 @@ export const skillsCatalog = [
   { id: 'nlp', name: 'Natural Language Processing', category: 'AI & Machine Learning', aliases: ['NLP', 'Text Processing', 'BERT', 'GPT', 'LLM'] },
   { id: 'computer-vision', name: 'Computer Vision', category: 'AI & Machine Learning', aliases: ['CV', 'Image Processing', 'Object Detection', 'OpenCV'] },
   { id: 'data-visualization', name: 'Data Visualization', category: 'Data Science', aliases: ['Matplotlib', 'Seaborn', 'Plotly', 'Tableau', 'Power BI'] },
+  { id: 'mlflow', name: 'MLflow', category: 'AI & Machine Learning', aliases: ['ML Flow', 'ML Lifecycle Management'] },
 
   // Cloud & DevOps
   { id: 'aws', name: 'AWS', category: 'Cloud & DevOps', aliases: ['Amazon Web Services', 'EC2', 'S3', 'Lambda', 'SageMaker'] },
@@ -87,12 +90,22 @@ export const skillsCatalog = [
   { id: 'monitoring', name: 'Monitoring & Observability', category: 'Cloud & DevOps', aliases: ['Prometheus', 'Grafana', 'Datadog', 'CloudWatch', 'ELK Stack'] },
   { id: 'spark', name: 'Apache Spark', category: 'Cloud & DevOps', aliases: ['PySpark', 'Spark Streaming'] },
   { id: 'kafka', name: 'Apache Kafka', category: 'Cloud & DevOps', aliases: ['Message Queue', 'Event Streaming', 'Pub/Sub'] },
+  { id: 'ansible', name: 'Ansible', category: 'Cloud & DevOps', aliases: ['Ansible Automation', 'Configuration Management'] },
+  { id: 'prometheus', name: 'Prometheus / Grafana', category: 'Cloud & DevOps', aliases: ['Prometheus', 'Grafana', 'Metrics Monitoring'] },
+  { id: 'airflow', name: 'Apache Airflow', category: 'Data Science', aliases: ['Airflow', 'Workflow Orchestration'] },
+  { id: 'dbt', name: 'dbt', category: 'Data Science', aliases: ['Data Build Tool', 'dbt Core'] },
 
   // Mobile Development
   { id: 'android', name: 'Android Development', category: 'Mobile Development', aliases: ['Android SDK', 'Android Studio', 'MVVM Android'] },
   { id: 'ios', name: 'iOS Development', category: 'Mobile Development', aliases: ['iOS SDK', 'UIKit', 'Xcode'] },
   { id: 'react-native', name: 'React Native', category: 'Mobile Development', aliases: ['RN', 'Cross Platform Mobile'] },
   { id: 'flutter', name: 'Flutter', category: 'Mobile Development', aliases: ['Dart', 'Flutter SDK'] },
+  { id: 'firebase', name: 'Firebase', category: 'Mobile Development', aliases: ['Firebase Auth', 'Firestore', 'Firebase Cloud Messaging'] },
+  { id: 'jetpack-compose', name: 'Jetpack Compose', category: 'Mobile Development', aliases: ['Android Compose', 'Compose UI'] },
+  { id: 'swiftui', name: 'SwiftUI', category: 'Mobile Development', aliases: ['Swift UI', 'Apple SwiftUI'] },
+  { id: 'combine', name: 'Combine / RxSwift', category: 'Mobile Development', aliases: ['Combine Framework', 'RxSwift'] },
+  { id: 'xcode', name: 'Xcode', category: 'Mobile Development', aliases: ['Apple Xcode', 'iOS IDE'] },
+  { id: 'xml', name: 'XML Layouts', category: 'Mobile Development', aliases: ['XML', 'Android XML'] },
 
   // Soft Skills
   { id: 'communication', name: 'Communication', category: 'Soft Skills', aliases: ['Verbal Communication', 'Written Communication', 'Presentation'] },
@@ -106,8 +119,26 @@ export const skillsCatalog = [
   { id: 'git', name: 'Git', category: 'Tools & Version Control', aliases: ['GitHub', 'GitLab', 'Bitbucket', 'Version Control'] },
   { id: 'jira', name: 'Jira', category: 'Tools & Version Control', aliases: ['Project Management', 'Issue Tracker', 'Confluence'] },
   { id: 'figma', name: 'Figma', category: 'Design', aliases: ['Figma Design', 'Sketch', 'Adobe XD'] },
+  { id: 'selenium', name: 'Selenium', category: 'Tools & Version Control', aliases: ['Selenium WebDriver', 'Browser Automation'] },
+  { id: 'performance-testing', name: 'Performance Testing', category: 'Tools & Version Control', aliases: ['JMeter', 'Load Testing', 'Stress Testing'] },
+  { id: 'excel', name: 'Excel / Google Sheets', category: 'Data Science', aliases: ['Microsoft Excel', 'Google Sheets', 'Spreadsheets'] },
+  { id: 'tableau', name: 'Tableau / Power BI', category: 'Data Science', aliases: ['Tableau', 'Power BI', 'BI Tools'] },
 
   // Cybersecurity
   { id: 'security', name: 'Information Security', category: 'Cybersecurity', aliases: ['InfoSec', 'Cybersecurity', 'Network Security'] },
   { id: 'security-protocols', name: 'Security Protocols', category: 'Cybersecurity', aliases: ['TLS/SSL', 'OAuth', 'HTTPS', 'JWT'] },
+  { id: 'siem', name: 'SIEM Tools', category: 'Cybersecurity', aliases: ['Splunk', 'Security Information and Event Management'] },
+  { id: 'incident-response', name: 'Incident Response', category: 'Cybersecurity', aliases: ['Security Incident Response', 'Incident Handling'] },
+  { id: 'cryptography', name: 'Cryptography', category: 'Cybersecurity', aliases: ['Encryption', 'Cryptographic Algorithms'] },
+  { id: 'cloud-security', name: 'Cloud Security', category: 'Cybersecurity', aliases: ['AWS Security', 'GCP Security', 'Azure Security'] },
+  { id: 'penetration-testing', name: 'Penetration Testing', category: 'Cybersecurity', aliases: ['Pen Testing', 'Ethical Hacking'] },
+  { id: 'compliance', name: 'Security Compliance', category: 'Cybersecurity', aliases: ['ISO 27001', 'GDPR', 'Compliance'] },
+
+  // Design
+  { id: 'accessibility', name: 'Accessibility (WCAG)', category: 'Design', aliases: ['WCAG', 'Web Accessibility', 'Inclusive Design'] },
+  { id: 'design-systems', name: 'Design Systems', category: 'Design', aliases: ['Design System', 'Component Libraries'] },
+  { id: 'motion-design', name: 'Motion Design', category: 'Design', aliases: ['UI Animation', 'Motion Graphics'] },
+  { id: 'user-research', name: 'User Research', category: 'Design', aliases: ['UX Research', 'User Interviews', 'Usability Research'] },
+  { id: 'ux-design', name: 'UX Design Principles', category: 'Design', aliases: ['User Experience Design', 'UX'] },
+  { id: 'wireframing', name: 'Wireframing & Prototyping', category: 'Design', aliases: ['Wireframes', 'Prototyping', 'Low Fidelity Design'] },
 ];

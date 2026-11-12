@@ -1,5 +1,15 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initialNotifications } from '../data/notifications';
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
+
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
+
 import { roles } from '../data/roles';
 import { companies } from '../data/companies';
 import { generateRoadmap } from '../utils/roadmap';
@@ -7,359 +17,791 @@ import { categorizeSkills } from '../utils/matching';
 
 const AppContext = createContext(null);
 
-const DEFAULT_USER_SKILLS = [
-  { id: 'javascript', skillId: 'javascript', name: 'JavaScript', category: 'Web Development', proficiency: 'Advanced' },
-  { id: 'react', skillId: 'react', name: 'React', category: 'Web Development', proficiency: 'Intermediate' },
-  { id: 'html', skillId: 'html', name: 'HTML', category: 'Web Development', proficiency: 'Advanced' },
-  { id: 'css', skillId: 'css', name: 'CSS', category: 'Web Development', proficiency: 'Advanced' },
-  { id: 'git', skillId: 'git', name: 'Git', category: 'Tools & Version Control', proficiency: 'Intermediate' },
-  { id: 'sql', skillId: 'sql', name: 'SQL', category: 'Databases', proficiency: 'Intermediate' },
-  { id: 'python', skillId: 'python', name: 'Python', category: 'Programming Languages', proficiency: 'Beginner' },
-  { id: 'dsa', skillId: 'data-structures', name: 'Data Structures and Algorithms', category: 'DSA & CS Fundamentals', proficiency: 'Beginner' },
-];
-
 export function AppProvider({ children }) {
-  // Theme state
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('skillsync_theme') || 'light';
-  });
+  const { currentUser } = useAuth();
+
+  // --------------------------------------------------
+  // THEME
+  // --------------------------------------------------
+
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('skillsync_theme') || 'light'
+  );
 
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('skillsync_theme', theme);
   }, [theme]);
 
   const toggleTheme = (forcedTheme) => {
-    if (forcedTheme) {
-      setTheme(forcedTheme);
-    } else {
-      setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-    }
+    setTheme((previous) =>
+      forcedTheme || (previous === 'light' ? 'dark' : 'light')
+    );
   };
 
-  // User Profile State
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_user_profile');
-      return stored
-        ? JSON.parse(stored)
-        : {
-            name: 'Alex Johnson',
-            email: 'demo@skillsync.app',
-            headline: 'Aspiring Full Stack Engineer & Computer Science Student',
-            education: 'B.Tech in Computer Science and Engineering',
-            experience: 'Fresher (0-1 yrs)',
-            bio: 'Passionate about frontend architecture, responsive design, and algorithms. Currently expanding my stack towards Full Stack and Cloud engineering.',
-            location: 'Bengaluru, Karnataka, India',
-            linkedin: 'https://linkedin.com/in/alexjohnson-demo',
-            github: 'https://github.com/alexjohnson-demo',
-            careerInterests: ['Frontend Development', 'Full Stack Development', 'Cloud Computing', 'AI Integration'],
-            targetCompanies: ['Google', 'Microsoft', 'Amazon', 'Flipkart'],
-            targetRoles: ['Frontend Developer', 'Full Stack Developer', 'Software Engineer'],
-          };
-    } catch {
-      return {};
-    }
-  });
+  // --------------------------------------------------
+  // APPLICATION STATE
+  // --------------------------------------------------
 
-  const updateUser = (fields) => {
-    setUser((prev) => {
-      const updated = { ...prev, ...fields };
-      localStorage.setItem('skillsync_user_profile', JSON.stringify(updated));
-      return updated;
-    });
-  };
+  const [user, setUser] = useState(null);
+  const [userSkills, setUserSkills] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [savedCompanies, setSavedCompanies] = useState([]);
+  const [savedRoles, setSavedRoles] = useState([]);
+  const [savedRoadmaps, setSavedRoadmaps] = useState({});
+  const [roadmapProgress, setRoadmapProgress] = useState({});
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
 
-  // Skills State
-  const [userSkills, setUserSkills] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_user_skills');
-      return stored ? JSON.parse(stored) : DEFAULT_USER_SKILLS;
-    } catch {
-      return DEFAULT_USER_SKILLS;
-    }
-  });
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Maps the frontend roadmap ID to its database UUID.
+  const [roadmapDatabaseIds, setRoadmapDatabaseIds] = useState({});
+
+  // --------------------------------------------------
+  // LOAD AUTHENTICATED USER DATA
+  // --------------------------------------------------
 
   useEffect(() => {
-    localStorage.setItem('skillsync_user_skills', JSON.stringify(userSkills));
-  }, [userSkills]);
+    let active = true;
 
-  const addSkill = (skill) => {
-    setUserSkills((prev) => {
-      const existsIndex = prev.findIndex(
-        (s) =>
-          (s.skillId && s.skillId.toLowerCase() === (skill.skillId || skill.id || '').toLowerCase()) ||
-          s.name.toLowerCase() === skill.name.toLowerCase()
-      );
-      if (existsIndex >= 0) {
-        const copy = [...prev];
-        copy[existsIndex] = { ...copy[existsIndex], ...skill };
-        return copy;
+    const loadUserData = async () => {
+      if (!currentUser) {
+        setUser(null);
+        setUserSkills([]);
+        setNotifications([]);
+        setSavedCompanies([]);
+        setSavedRoles([]);
+        setSavedRoadmaps({});
+        setRoadmapProgress({});
+        setRecentlyViewed([]);
+        setRoadmapDatabaseIds({});
+        setDataLoading(false);
+        return;
       }
-      const newSkill = {
-        id: skill.id || skill.skillId || `skill-${Date.now()}`,
-        skillId: skill.skillId || skill.id || skill.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        name: skill.name,
-        category: skill.category || 'General',
-        proficiency: skill.proficiency || 'Beginner',
+
+      setDataLoading(true);
+      setUser(currentUser);
+
+      try {
+        const userId = currentUser.id;
+
+        const results = await Promise.all([
+          supabase
+            .from('user_skills')
+            .select('id, skill_id, proficiency, skills(id, name, category)')
+            .eq('user_id', userId),
+
+          supabase
+            .from('user_notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false }),
+
+          supabase
+            .from('user_bookmarks')
+            .select('company_id, role_id')
+            .eq('user_id', userId),
+
+          supabase
+            .from('user_roadmaps')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false }),
+
+          supabase
+            .from('recently_viewed')
+            .select('*')
+            .eq('user_id', userId)
+            .order('viewed_at', { ascending: false })
+            .limit(8),
+        ]);
+
+        if (!active) return;
+
+        const [
+          skillsResult,
+          notificationsResult,
+          bookmarksResult,
+          roadmapsResult,
+          recentlyViewedResult,
+        ] = results;
+
+        // Skills
+        if (skillsResult.error) throw skillsResult.error;
+
+        setUserSkills(
+          (skillsResult.data || [])
+            .filter((row) => row.skills)
+            .map((row) => ({
+              id: row.skill_id,
+              skillId: row.skill_id,
+              name: row.skills.name,
+              category: row.skills.category,
+              proficiency: row.proficiency,
+            }))
+        );
+
+        // Notifications
+        if (notificationsResult.error) throw notificationsResult.error;
+
+        setNotifications(
+          (notificationsResult.data || []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            message: row.message,
+            type: row.metadata?.originalType || row.type,
+            icon: row.icon || 'Bell',
+            link: row.link || null,
+            read: row.is_read,
+            timestamp: row.created_at,
+          }))
+        );
+
+        // Bookmarks
+        if (bookmarksResult.error) throw bookmarksResult.error;
+
+        setSavedCompanies(
+          (bookmarksResult.data || [])
+            .filter((row) => row.company_id)
+            .map((row) => row.company_id)
+        );
+
+        setSavedRoles(
+          (bookmarksResult.data || [])
+            .filter((row) => row.role_id)
+            .map((row) => row.role_id)
+        );
+
+        // Roadmaps
+        if (roadmapsResult.error) throw roadmapsResult.error;
+
+        const roadmapMap = {};
+        const progressMap = {};
+        const databaseIdMap = {};
+
+        (roadmapsResult.data || []).forEach((row) => {
+          const roadmap = row.roadmap_data;
+
+          if (!roadmap) return;
+
+          const frontendId = roadmap.id || row.id;
+
+          roadmapMap[frontendId] = {
+            ...roadmap,
+            id: frontendId,
+          };
+
+          progressMap[frontendId] = {
+            completedTasks: row.completed_tasks || [],
+            targetDate: row.target_date || null,
+          };
+
+          databaseIdMap[frontendId] = row.id;
+        });
+
+        setSavedRoadmaps(roadmapMap);
+        setRoadmapProgress(progressMap);
+        setRoadmapDatabaseIds(databaseIdMap);
+
+        // Recently viewed
+        if (recentlyViewedResult.error) throw recentlyViewedResult.error;
+
+        const viewedItems = (recentlyViewedResult.data || [])
+          .map((row) => {
+            if (row.company_id) {
+              const company = companies.find(
+                (item) => item.id === row.company_id
+              );
+
+              return company
+                ? {
+                    type: 'company',
+                    id: company.id,
+                    name: company.name,
+                    subtitle: `${company.industry || 'Company'} · ${company.location || ''}`,
+                  }
+                : null;
+            }
+
+            if (row.role_id) {
+              const role = roles.find(
+                (item) => item.id === row.role_id
+              );
+
+              return role
+                ? {
+                    type: 'role',
+                    id: role.id,
+                    name: role.title,
+                    subtitle: `${role.category || 'Career'} · ${role.level || ''}`,
+                  }
+                : null;
+            }
+
+            return null;
+          })
+          .filter(Boolean);
+
+        setRecentlyViewed(viewedItems);
+      } catch (error) {
+        console.error('Error loading user application data:', error);
+      } finally {
+        if (active) setDataLoading(false);
+      }
+    };
+
+    loadUserData();
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id]);
+
+  // --------------------------------------------------
+  // USER PROFILE
+  // --------------------------------------------------
+
+  const updateUser = (fields) => {
+    setUser((previous) => ({
+      ...(previous || {}),
+      ...fields,
+    }));
+  };
+
+  // --------------------------------------------------
+  // SKILLS
+  // --------------------------------------------------
+
+  const addSkill = async (skill) => {
+    if (!currentUser) return;
+
+    const skillId =
+      skill.skillId ||
+      skill.id ||
+      skill.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+    const { data: existingSkill, error: lookupError } = await supabase
+      .from('skills')
+      .select('id, name, category')
+      .eq('id', skillId)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+
+    if (!existingSkill) {
+      throw new Error(
+        `The skill "${skill.name}" was not found in the skills database.`
+      );
+    }
+
+    const proficiency = skill.proficiency || 'Beginner';
+
+    const { error } = await supabase
+      .from('user_skills')
+      .upsert(
+        {
+          user_id: currentUser.id,
+          skill_id: skillId,
+          proficiency,
+        },
+        { onConflict: 'user_id,skill_id' }
+      );
+
+    if (error) throw error;
+
+    setUserSkills((previous) => {
+      const existing = previous.find((item) => item.id === skillId);
+
+      const updatedSkill = {
+        id: skillId,
+        skillId,
+        name: existingSkill.name,
+        category: existingSkill.category,
+        proficiency,
       };
-      return [...prev, newSkill];
+
+      return existing
+        ? previous.map((item) =>
+            item.id === skillId ? updatedSkill : item
+          )
+        : [...previous, updatedSkill];
     });
 
-    // Add automatic notification
-    addNotification({
+    await addNotification({
       title: 'Skill Added',
-      message: `Added "${skill.name}" (${skill.proficiency || 'Beginner'}) to your skill profile. Your match scores have updated!`,
+      message: `Added "${existingSkill.name}" (${proficiency}) to your skill profile. Your match scores have updated!`,
       type: 'match',
       icon: 'Sparkles',
       link: '/matches',
     });
   };
 
-  const removeSkill = (skillId) => {
-    setUserSkills((prev) => prev.filter((s) => s.id !== skillId && s.skillId !== skillId));
-  };
+  const removeSkill = async (skillId) => {
+    if (!currentUser) return;
 
-  const updateSkillProficiency = (skillId, newProficiency) => {
-    setUserSkills((prev) =>
-      prev.map((s) => (s.id === skillId || s.skillId === skillId ? { ...s, proficiency: newProficiency } : s))
+    const { error } = await supabase
+      .from('user_skills')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('skill_id', skillId);
+
+    if (error) throw error;
+
+    setUserSkills((previous) =>
+      previous.filter(
+        (skill) => skill.id !== skillId && skill.skillId !== skillId
+      )
     );
   };
 
-  // Notifications State
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_notifications');
-      return stored ? JSON.parse(stored) : initialNotifications;
-    } catch {
-      return initialNotifications;
-    }
-  });
+  const updateSkillProficiency = async (skillId, newProficiency) => {
+    if (!currentUser) return;
 
-  useEffect(() => {
-    localStorage.setItem('skillsync_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    const { error } = await supabase
+      .from('user_skills')
+      .update({ proficiency: newProficiency })
+      .eq('user_id', currentUser.id)
+      .eq('skill_id', skillId);
 
-  const markNotificationRead = (id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    if (error) throw error;
+
+    setUserSkills((previous) =>
+      previous.map((skill) =>
+        skill.id === skillId || skill.skillId === skillId
+          ? { ...skill, proficiency: newProficiency }
+          : skill
+      )
+    );
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
+  // --------------------------------------------------
+  // NOTIFICATIONS
+  // --------------------------------------------------
 
-  const dismissNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  const addNotification = async (notif) => {
+    if (!currentUser) return;
 
-  const addNotification = (notif) => {
-    const newNotif = {
-      id: `n-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      timestamp: new Date().toISOString(),
-      read: false,
-      ...notif,
+    const allowedTypes = ['info', 'success', 'warning', 'error'];
+
+    const databaseType = allowedTypes.includes(notif.type)
+      ? notif.type
+      : 'info';
+
+    const metadata = {
+      ...(notif.metadata || {}),
+      originalType: notif.type || 'info',
     };
-    setNotifications((prev) => [newNotif, ...prev]);
+
+    const { data, error } = await supabase
+      .from('user_notifications')
+      .insert({
+        user_id: currentUser.id,
+        title: notif.title,
+        message: notif.message,
+        type: databaseType,
+        icon: notif.icon || 'Bell',
+        link: notif.link || null,
+        metadata,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const newNotification = {
+      id: data.id,
+      title: data.title,
+      message: data.message,
+      type: metadata.originalType,
+      icon: data.icon,
+      link: data.link,
+      read: false,
+      timestamp: data.created_at,
+    };
+
+    setNotifications((previous) => [
+      newNotification,
+      ...previous,
+    ]);
+
+    return newNotification;
   };
 
-  // Saved Companies State
-  const [savedCompanies, setSavedCompanies] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_saved_companies');
-      return stored ? JSON.parse(stored) : ['google', 'microsoft'];
-    } catch {
-      return ['google', 'microsoft'];
-    }
-  });
+  const markNotificationRead = async (id) => {
+    if (!currentUser) return;
 
-  useEffect(() => {
-    localStorage.setItem('skillsync_saved_companies', JSON.stringify(savedCompanies));
-  }, [savedCompanies]);
+    const { error } = await supabase
+      .from('user_notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('id', id);
 
-  const toggleSaveCompany = (companyId) => {
-    setSavedCompanies((prev) => {
-      const exists = prev.includes(companyId);
-      const updated = exists ? prev.filter((id) => id !== companyId) : [...prev, companyId];
-      return updated;
-    });
+    if (error) throw error;
+
+    setNotifications((previous) =>
+      previous.map((notification) =>
+        notification.id === id
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
   };
 
-  // Saved Roles State
-  const [savedRoles, setSavedRoles] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_saved_roles');
-      return stored ? JSON.parse(stored) : ['frontend-dev', 'full-stack-dev'];
-    } catch {
-      return ['frontend-dev', 'full-stack-dev'];
-    }
-  });
+  const markAllNotificationsRead = async () => {
+    if (!currentUser) return;
 
-  useEffect(() => {
-    localStorage.setItem('skillsync_saved_roles', JSON.stringify(savedRoles));
-  }, [savedRoles]);
+    const { error } = await supabase
+      .from('user_notifications')
+      .update({ is_read: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
 
-  const toggleSaveRole = (roleId) => {
-    setSavedRoles((prev) => {
-      const exists = prev.includes(roleId);
-      return exists ? prev.filter((id) => id !== roleId) : [...prev, roleId];
-    });
+    if (error) throw error;
+
+    setNotifications((previous) =>
+      previous.map((notification) => ({
+        ...notification,
+        read: true,
+      }))
+    );
   };
 
-  // Saved Roadmaps State
-  const [savedRoadmaps, setSavedRoadmaps] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_saved_roadmaps');
-      if (stored) return JSON.parse(stored);
+  const dismissNotification = async (id) => {
+    if (!currentUser) return;
 
-      // Generate a default starter roadmap for Frontend Dev
-      const feRole = roles.find((r) => r.id === 'frontend-dev');
-      const google = companies.find((c) => c.id === 'google');
-      if (feRole) {
-        const { missing, improve } = categorizeSkills(DEFAULT_USER_SKILLS, feRole);
-        const rm = generateRoadmap(feRole, missing, improve, google);
-        return { [rm.id]: rm };
-      }
-      return {};
-    } catch {
-      return {};
+    const { error } = await supabase
+      .from('user_notifications')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    setNotifications((previous) =>
+      previous.filter((notification) => notification.id !== id)
+    );
+  };
+
+  // --------------------------------------------------
+  // SAVED COMPANIES AND ROLES
+  // --------------------------------------------------
+
+  const toggleBookmark = async (field, value) => {
+    if (!currentUser) return;
+
+    const filterField = field === 'company' ? 'company_id' : 'role_id';
+
+    const { data: existing, error: lookupError } = await supabase
+      .from('user_bookmarks')
+      .select('user_id')
+      .eq('user_id', currentUser.id)
+      .eq(filterField, value)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+
+    if (existing) {
+      const { error } = await supabase
+        .from('user_bookmarks')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq(filterField, value);
+
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('user_bookmarks')
+        .insert({
+          user_id: currentUser.id,
+          [filterField]: value,
+        });
+
+      if (error) throw error;
     }
-  });
 
-  useEffect(() => {
-    localStorage.setItem('skillsync_saved_roadmaps', JSON.stringify(savedRoadmaps));
-  }, [savedRoadmaps]);
-
-  // Roadmap Progress State { [roadmapId]: { completedTasks: string[], targetDate: string } }
-  const [roadmapProgress, setRoadmapProgress] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_roadmap_progress');
-      if (stored) return JSON.parse(stored);
-      return {};
-    } catch {
-      return {};
+    if (field === 'company') {
+      setSavedCompanies((previous) =>
+        existing
+          ? previous.filter((id) => id !== value)
+          : [...previous, value]
+      );
+    } else {
+      setSavedRoles((previous) =>
+        existing
+          ? previous.filter((id) => id !== value)
+          : [...previous, value]
+      );
     }
-  });
+  };
 
-  useEffect(() => {
-    localStorage.setItem('skillsync_roadmap_progress', JSON.stringify(roadmapProgress));
-  }, [roadmapProgress]);
+  const toggleSaveCompany = (companyId) =>
+    toggleBookmark('company', companyId);
 
-  const saveRoadmap = (roadmap) => {
-    setSavedRoadmaps((prev) => ({
-      ...prev,
-      [roadmap.id]: roadmap,
+  const toggleSaveRole = (roleId) =>
+    toggleBookmark('role', roleId);
+
+  // --------------------------------------------------
+  // ROADMAPS
+  // --------------------------------------------------
+
+  const saveRoadmap = async (roadmap) => {
+    if (!currentUser) return;
+
+    const roleId = roadmap.roleId || roadmap.role?.id;
+    const companyId = roadmap.companyId || roadmap.company?.id || null;
+
+    if (!roleId) {
+      throw new Error('This roadmap is missing its role ID.');
+    }
+
+    const { data, error } = await supabase
+      .from('user_roadmaps')
+      .insert({
+        user_id: currentUser.id,
+        role_id: roleId,
+        company_id: companyId,
+        progress: 0,
+        completed_tasks: [],
+        roadmap_data: roadmap,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const frontendId = roadmap.id || data.id;
+
+    const savedRoadmap = {
+      ...roadmap,
+      id: frontendId,
+    };
+
+    setSavedRoadmaps((previous) => ({
+      ...previous,
+      [frontendId]: savedRoadmap,
     }));
-    addNotification({
+
+    setRoadmapDatabaseIds((previous) => ({
+      ...previous,
+      [frontendId]: data.id,
+    }));
+
+    setRoadmapProgress((previous) => ({
+      ...previous,
+      [frontendId]: {
+        completedTasks: [],
+        targetDate: null,
+      },
+    }));
+
+    await addNotification({
       title: 'Roadmap Generated',
-      message: `Personalized learning roadmap for ${roadmap.roleTitle} has been saved to My Roadmaps!`,
+      message: `Personalized learning roadmap for ${roadmap.roleTitle || 'your selected role'} has been saved to My Roadmaps!`,
       type: 'roadmap',
       icon: 'Map',
-      link: `/roadmaps/${roadmap.id}`,
+      link: `/roadmaps/${frontendId}`,
     });
   };
 
-  const deleteRoadmap = (roadmapId) => {
-    setSavedRoadmaps((prev) => {
-      const copy = { ...prev };
-      delete copy[roadmapId];
-      return copy;
-    });
-    setRoadmapProgress((prev) => {
-      const copy = { ...prev };
-      delete copy[roadmapId];
-      return copy;
-    });
-  };
+  const deleteRoadmap = async (roadmapId) => {
+    if (!currentUser) return;
 
-  const toggleRoadmapTask = (roadmapId, taskId) => {
-    setRoadmapProgress((prev) => {
-      const current = prev[roadmapId] || { completedTasks: [], targetDate: null };
-      const taskSet = new Set(current.completedTasks || []);
-      if (taskSet.has(taskId)) {
-        taskSet.delete(taskId);
-      } else {
-        taskSet.add(taskId);
-      }
-      const updated = {
-        ...current,
-        completedTasks: Array.from(taskSet),
-      };
-      return {
-        ...prev,
-        [roadmapId]: updated,
-      };
-    });
-  };
+    const databaseId = roadmapDatabaseIds[roadmapId];
 
-  const setRoadmapTargetDate = (roadmapId, date) => {
-    setRoadmapProgress((prev) => {
-      const current = prev[roadmapId] || { completedTasks: [], targetDate: null };
-      return {
-        ...prev,
-        [roadmapId]: { ...current, targetDate: date },
-      };
-    });
-  };
-
-  // Recently Viewed State
-  const [recentlyViewed, setRecentlyViewed] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skillsync_recently_viewed');
-      return stored
-        ? JSON.parse(stored)
-        : [
-            { type: 'company', id: 'google', name: 'Google', subtitle: 'Technology · Mountain View, CA' },
-            { type: 'role', id: 'frontend-dev', name: 'Frontend Developer', subtitle: 'Web Development · Mid Level' },
-            { type: 'company', id: 'microsoft', name: 'Microsoft', subtitle: 'Technology · Redmond, WA' },
-          ];
-    } catch {
-      return [];
+    if (!databaseId) {
+      throw new Error('Could not find this roadmap in your account.');
     }
-  });
 
-  useEffect(() => {
-    localStorage.setItem('skillsync_recently_viewed', JSON.stringify(recentlyViewed));
-  }, [recentlyViewed]);
+    const { error } = await supabase
+      .from('user_roadmaps')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('id', databaseId);
 
-  const addToRecentlyViewed = (item) => {
-    setRecentlyViewed((prev) => {
-      const filtered = prev.filter((i) => !(i.type === item.type && i.id === item.id));
+    if (error) throw error;
+
+    setSavedRoadmaps((previous) => {
+      const copy = { ...previous };
+      delete copy[roadmapId];
+      return copy;
+    });
+
+    setRoadmapProgress((previous) => {
+      const copy = { ...previous };
+      delete copy[roadmapId];
+      return copy;
+    });
+
+    setRoadmapDatabaseIds((previous) => {
+      const copy = { ...previous };
+      delete copy[roadmapId];
+      return copy;
+    });
+  };
+
+  const updateRoadmapProgressInDatabase = async (
+    roadmapId,
+    progressData
+  ) => {
+    const databaseId = roadmapDatabaseIds[roadmapId];
+
+    if (!currentUser || !databaseId) return;
+
+    const { error } = await supabase
+      .from('user_roadmaps')
+      .update({
+        completed_tasks: progressData.completedTasks || [],
+        target_date: progressData.targetDate || null,
+      })
+      .eq('user_id', currentUser.id)
+      .eq('id', databaseId);
+
+    if (error) throw error;
+  };
+
+  const toggleRoadmapTask = async (roadmapId, taskId) => {
+    const current = roadmapProgress[roadmapId] || {
+      completedTasks: [],
+      targetDate: null,
+    };
+
+    const taskSet = new Set(current.completedTasks || []);
+
+    if (taskSet.has(taskId)) {
+      taskSet.delete(taskId);
+    } else {
+      taskSet.add(taskId);
+    }
+
+    const updated = {
+      ...current,
+      completedTasks: Array.from(taskSet),
+    };
+
+    await updateRoadmapProgressInDatabase(roadmapId, updated);
+
+    setRoadmapProgress((previous) => ({
+      ...previous,
+      [roadmapId]: updated,
+    }));
+  };
+
+  const setRoadmapTargetDate = async (roadmapId, date) => {
+    const current = roadmapProgress[roadmapId] || {
+      completedTasks: [],
+      targetDate: null,
+    };
+
+    const updated = {
+      ...current,
+      targetDate: date,
+    };
+
+    await updateRoadmapProgressInDatabase(roadmapId, updated);
+
+    setRoadmapProgress((previous) => ({
+      ...previous,
+      [roadmapId]: updated,
+    }));
+  };
+
+  // --------------------------------------------------
+  // RECENTLY VIEWED
+  // --------------------------------------------------
+
+  const addToRecentlyViewed = async (item) => {
+    if (!currentUser) return;
+
+    const isCompany = item.type === 'company';
+    const field = isCompany ? 'company_id' : 'role_id';
+
+    const record = {
+      user_id: currentUser.id,
+      company_id: isCompany ? item.id : null,
+      role_id: isCompany ? null : item.id,
+      viewed_at: new Date().toISOString(),
+    };
+
+    const { error: deleteError } = await supabase
+      .from('recently_viewed')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq(field, item.id);
+
+    if (deleteError) throw deleteError;
+
+    const { error: insertError } = await supabase
+      .from('recently_viewed')
+      .insert(record);
+
+    if (insertError) throw insertError;
+
+    setRecentlyViewed((previous) => {
+      const filtered = previous.filter(
+        (entry) => !(entry.type === item.type && entry.id === item.id)
+      );
+
       return [item, ...filtered].slice(0, 8);
     });
   };
+
+  // --------------------------------------------------
+  // ROADMAP GENERATION HELPER
+  // --------------------------------------------------
+
+  const generateAndSaveRoadmap = async (role, missing, improve, company) => {
+    const roadmap = generateRoadmap(role, missing, improve, company);
+
+    await saveRoadmap(roadmap);
+
+    return roadmap;
+  };
+
+  // --------------------------------------------------
+  // CONTEXT VALUE
+  // --------------------------------------------------
 
   return (
     <AppContext.Provider
       value={{
         theme,
         toggleTheme,
+
         user,
         updateUser,
+
         userSkills,
         addSkill,
         removeSkill,
         updateSkillProficiency,
+
         notifications,
         markNotificationRead,
         markAllNotificationsRead,
         dismissNotification,
         addNotification,
+
         savedCompanies,
         toggleSaveCompany,
+
         savedRoles,
         toggleSaveRole,
+
         savedRoadmaps,
         saveRoadmap,
         deleteRoadmap,
+
         roadmapProgress,
         toggleRoadmapTask,
         setRoadmapTargetDate,
+
         recentlyViewed,
         addToRecentlyViewed,
+
+        dataLoading,
+
+        generateAndSaveRoadmap,
+        categorizeSkills,
       }}
     >
       {children}
@@ -369,8 +811,10 @@ export function AppProvider({ children }) {
 
 export function useApp() {
   const context = useContext(AppContext);
+
   if (!context) {
     throw new Error('useApp must be used within an AppProvider');
   }
+
   return context;
 }

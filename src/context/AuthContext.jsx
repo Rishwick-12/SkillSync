@@ -1,149 +1,225 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
-const DEMO_USER = {
-  id: 'usr_demo_01',
-  name: 'Alex Johnson',
-  email: 'demo@skillsync.app',
-  password: 'demo123',
-  headline: 'Aspiring Full Stack Engineer & Computer Science Student',
-  education: 'B.Tech in Computer Science and Engineering',
-  experience: 'Fresher (0-1 yrs)',
-  bio: 'Passionate about modern web technologies, building scalable apps with React & Node.js, and mastering DSA patterns.',
-  location: 'Bengaluru, India',
-  targetCompanies: ['Google', 'Microsoft', 'Amazon', 'Flipkart'],
-  targetRoles: ['Frontend Developer', 'Full Stack Developer', 'Software Engineer'],
-};
+function formatUser(authUser, profile) {
+  return {
+    id: authUser.id,
+    name:
+      profile?.full_name ||
+      authUser.user_metadata?.full_name ||
+      authUser.email?.split('@')[0] ||
+      'User',
+    email: authUser.email,
+    role: profile?.role || 'user',
+    avatar_url: profile?.avatar_url || '',
+    headline: profile?.headline || '',
+    education: profile?.education || '',
+    experience: profile?.experience || '',
+    bio: profile?.bio || '',
+    location: profile?.location || '',
+    linkedin: profile?.linkedin || '',
+    github: profile?.github || '',
+    careerInterests: profile?.career_interests || [],
+    targetCompanies: profile?.target_companies || [],
+    targetRoles: profile?.target_roles || [],
+  };
+}
+
+async function fetchUserProfile(authUser) {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return formatUser(authUser, profile);
+}
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const session = localStorage.getItem('skillsync_session');
-      return session ? JSON.parse(session) : DEMO_USER;
-    } catch {
-      return DEMO_USER;
-    }
-  });
-  const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Seed users database in localStorage if empty
-    try {
-      const usersRaw = localStorage.getItem('skillsync_users');
-      if (!usersRaw) {
-        localStorage.setItem('skillsync_users', JSON.stringify([DEMO_USER]));
+    let mounted = true;
+
+    const loadSession = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) throw error;
+
+        if (session?.user) {
+          const user = await fetchUserProfile(session.user);
+
+          if (mounted) setCurrentUser(user);
+        } else if (mounted) {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error('Unable to restore session:', error);
+
+        if (mounted) setCurrentUser(null);
+      } finally {
+        if (mounted) setLoading(false);
       }
-      if (!localStorage.getItem('skillsync_session')) {
-        localStorage.setItem('skillsync_session', JSON.stringify(DEMO_USER));
+    };
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session?.user) {
+        if (mounted) {
+          setCurrentUser(null);
+          setLoading(false);
+        }
+        return;
       }
-    } catch (e) {
-      console.error(e);
-    }
+
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED' ||
+        event === 'PASSWORD_RECOVERY'
+      ) {
+        Promise.resolve().then(async () => {
+          try {
+            const user = await fetchUserProfile(session.user);
+
+            if (mounted) setCurrentUser(user);
+          } catch (error) {
+            console.error('Unable to load user profile:', error);
+          } finally {
+            if (mounted) setLoading(false);
+          }
+        });
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = (email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          const users = JSON.parse(localStorage.getItem('skillsync_users') || '[]');
-          const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-          // For demo convenience, allow demo credentials or user credentials
-          if (email.toLowerCase() === 'demo@skillsync.app') {
-            const demoSession = { ...DEMO_USER };
-            localStorage.setItem('skillsync_session', JSON.stringify(demoSession));
-            setCurrentUser(demoSession);
-            return resolve(demoSession);
-          }
-
-          if (!user) {
-            return reject(new Error('No account found with this email address. Please register.'));
-          }
-
-          if (user.password !== password) {
-            return reject(new Error('Incorrect password. Please try again.'));
-          }
-
-          const sessionUser = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            headline: user.headline || 'Software Developer',
-            education: user.education || 'Computer Science',
-            experience: user.experience || 'Entry Level',
-          };
-          localStorage.setItem('skillsync_session', JSON.stringify(sessionUser));
-          setCurrentUser(sessionUser);
-          resolve(sessionUser);
-        } catch (err) {
-          reject(err);
-        }
-      }, 400);
+  const register = async (name, email, password) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: {
+          full_name: name.trim(),
+        },
+      },
     });
+
+    if (error) throw error;
+
+    if (!data.session || !data.user) {
+      return {
+        requiresEmailConfirmation: true,
+        email: data.user?.email || email,
+      };
+    }
+
+    const user = await fetchUserProfile(data.user);
+    setCurrentUser(user);
+
+    return {
+      requiresEmailConfirmation: false,
+      user,
+    };
   };
 
-  const register = (name, email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          const users = JSON.parse(localStorage.getItem('skillsync_users') || '[]');
-          if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-            return reject(new Error('An account with this email already exists.'));
-          }
-
-          const newUser = {
-            id: `usr_${Date.now()}`,
-            name,
-            email,
-            password,
-            headline: 'Aspiring Software Professional',
-            education: 'Computer Science & Engineering',
-            experience: 'Fresher (0-1 yrs)',
-          };
-
-          users.push(newUser);
-          localStorage.setItem('skillsync_users', JSON.stringify(users));
-
-          const sessionUser = {
-            id: newUser.id,
-            name: newUser.name,
-            email: newUser.email,
-            headline: newUser.headline,
-            education: newUser.education,
-            experience: newUser.experience,
-          };
-          localStorage.setItem('skillsync_session', JSON.stringify(sessionUser));
-          setCurrentUser(sessionUser);
-          resolve(sessionUser);
-        } catch (err) {
-          reject(err);
-        }
-      }, 400);
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
     });
+
+    if (error) throw error;
+
+    const user = await fetchUserProfile(data.user);
+    setCurrentUser(user);
+
+    return user;
   };
 
-  const logout = () => {
-    localStorage.removeItem('skillsync_session');
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) throw error;
+
     setCurrentUser(null);
   };
 
-  const updateProfile = (updatedFields) => {
-    if (!currentUser) return;
-    const updated = { ...currentUser, ...updatedFields };
-    setCurrentUser(updated);
-    localStorage.setItem('skillsync_session', JSON.stringify(updated));
-
-    try {
-      const users = JSON.parse(localStorage.getItem('skillsync_users') || '[]');
-      const index = users.findIndex((u) => u.id === currentUser.id);
-      if (index !== -1) {
-        users[index] = { ...users[index], ...updatedFields };
-        localStorage.setItem('skillsync_users', JSON.stringify(users));
-      }
-    } catch (e) {
-      console.error(e);
+  const updateProfile = async (updatedFields) => {
+    if (!currentUser) {
+      throw new Error('You must be logged in to update your profile.');
     }
+
+    const profileUpdates = {};
+
+    const fieldMap = {
+      name: 'full_name',
+      full_name: 'full_name',
+      headline: 'headline',
+      education: 'education',
+      experience: 'experience',
+      bio: 'bio',
+      location: 'location',
+      avatar_url: 'avatar_url',
+      linkedin: 'linkedin',
+      github: 'github',
+      careerInterests: 'career_interests',
+      targetCompanies: 'target_companies',
+      targetRoles: 'target_roles',
+    };
+
+    Object.entries(fieldMap).forEach(([frontendField, databaseField]) => {
+      if (updatedFields[frontendField] !== undefined) {
+        profileUpdates[databaseField] = updatedFields[frontendField];
+      }
+    });
+
+    if (Object.keys(profileUpdates).length === 0) {
+      return currentUser;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(profileUpdates)
+      .eq('id', currentUser.id);
+
+    if (error) throw error;
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) throw userError;
+
+    const updatedUser = await fetchUserProfile(user);
+
+    setCurrentUser(updatedUser);
+
+    return updatedUser;
   };
 
   return (
@@ -164,6 +240,10 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+
+  if (!ctx) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
   return ctx;
 }

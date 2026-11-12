@@ -1,5 +1,7 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+
 import {
   ArrowLeft,
   Target,
@@ -15,10 +17,15 @@ import {
   Check,
   AlertCircle,
 } from 'lucide-react';
+
 import { useApp } from '../context/AppContext';
 import { roles } from '../data/roles';
 import { companies } from '../data/companies';
-import { calculateMatch, categorizeSkills, meetsRequirement } from '../utils/matching';
+import {
+  calculateMatch,
+  categorizeSkills,
+  meetsRequirement,
+} from '../utils/matching';
 import { generateRoadmap } from '../utils/roadmap';
 import MatchBadge from '../components/ui/MatchBadge';
 import ProgressBar from '../components/ui/ProgressBar';
@@ -26,6 +33,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 export default function RoleDetailPage() {
   const { roleId } = useParams();
   const navigate = useNavigate();
+
   const {
     userSkills,
     savedRoles,
@@ -34,7 +42,7 @@ export default function RoleDetailPage() {
     addToRecentlyViewed,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState('gap'); // 'gap' | 'all' | 'responsibilities'
+  const [activeTab, setActiveTab] = useState('gap');
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
 
   const role = useMemo(() => {
@@ -49,6 +57,7 @@ export default function RoleDetailPage() {
         name: role.title,
         subtitle: `${role.category} · ${role.level}`,
       });
+
       if (role.companyIds && role.companyIds.length > 0 && !selectedCompanyId) {
         setSelectedCompanyId(role.companyIds[0]);
       }
@@ -68,6 +77,7 @@ export default function RoleDetailPage() {
 
   const hiringCompanies = useMemo(() => {
     if (!role) return [];
+
     return companies.filter(
       (c) => c.roles.includes(role.id) || role.companyIds?.includes(c.id)
     );
@@ -83,9 +93,11 @@ export default function RoleDetailPage() {
         <h2 className="text-xl font-bold text-slate-800 dark:text-white">
           Role Not Found
         </h2>
+
         <p className="text-slate-500 text-sm">
           The requested job role specification could not be found.
         </p>
+
         <Link to="/matches" className="btn-primary inline-flex">
           <ArrowLeft size={16} /> Back to Recommended Jobs
         </Link>
@@ -96,19 +108,29 @@ export default function RoleDetailPage() {
   const isSaved = savedRoles.includes(role.id);
 
   // Generate Roadmap handler
-  const handleGenerateRoadmap = () => {
-    const rm = generateRoadmap(
-      role,
-      skillGroups.missing,
-      skillGroups.improve,
-      targetCompany
-    );
-    saveRoadmap(rm);
-    navigate(`/roadmaps/${rm.id}`);
+  const handleGenerateRoadmap = async () => {
+    try {
+      const rm = generateRoadmap(
+        role,
+        skillGroups.missing,
+        skillGroups.improve,
+        targetCompany
+      );
+
+      // Wait until Supabase has saved the roadmap
+      await saveRoadmap(rm);
+
+      // Navigate only after saving succeeds
+      navigate(`/roadmaps/${rm.id}`);
+    } catch (error) {
+      console.error('Error generating roadmap:', error);
+      alert(`Could not generate roadmap: ${error.message}`);
+    }
   };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+
       {/* Back button */}
       <div>
         <button
@@ -122,13 +144,20 @@ export default function RoleDetailPage() {
       {/* Role Header Card */}
       <div className="card border border-slate-200 dark:border-slate-700 p-6 sm:p-8 space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="badge badge-blue text-xs font-semibold">
                 {role.category}
               </span>
-              <span className="badge badge-gray text-xs">{role.level}</span>
-              <span className="badge badge-gray text-xs">{role.salaryRange}</span>
+
+              <span className="badge badge-gray text-xs">
+                {role.level}
+              </span>
+
+              <span className="badge badge-gray text-xs">
+                {role.salaryRange}
+              </span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -143,6 +172,7 @@ export default function RoleDetailPage() {
               <span className="font-semibold text-slate-700 dark:text-slate-300">
                 Companies offering this role:
               </span>
+
               {hiringCompanies.map((c) => (
                 <button
                   key={c.id}
@@ -163,6 +193,7 @@ export default function RoleDetailPage() {
           <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-4 flex-shrink-0">
             <div className="text-left sm:text-right">
               <MatchBadge percentage={matchResult?.percentage || 0} size="lg" />
+
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {matchResult?.matchingCount} of {matchResult?.totalRequired} skills matched
               </p>
@@ -176,6 +207,7 @@ export default function RoleDetailPage() {
               >
                 {isSaved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
               </button>
+
               <button
                 onClick={handleGenerateRoadmap}
                 className="btn-primary"
@@ -193,15 +225,18 @@ export default function RoleDetailPage() {
             <span className="text-slate-700 dark:text-slate-300">
               Skill Overlap Breakdown:
             </span>
+
             <div className="flex items-center gap-4 text-xs">
               <span className="text-emerald-600 flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
                 Skills You Have ({skillGroups.have.length})
               </span>
+
               <span className="text-amber-600 flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                 Needs Practice ({skillGroups.improve.length})
               </span>
+
               <span className="text-rose-600 flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
                 Missing Skills ({skillGroups.missing.length})
@@ -212,7 +247,13 @@ export default function RoleDetailPage() {
           <ProgressBar
             value={matchResult?.percentage || 0}
             size="md"
-            color={matchResult?.percentage >= 70 ? 'green' : matchResult?.percentage >= 40 ? 'yellow' : 'red'}
+            color={
+              matchResult?.percentage >= 70
+                ? 'green'
+                : matchResult?.percentage >= 40
+                ? 'yellow'
+                : 'red'
+            }
           />
         </div>
       </div>
@@ -230,6 +271,7 @@ export default function RoleDetailPage() {
           >
             Skill Gap Breakdown
           </button>
+
           <button
             onClick={() => setActiveTab('all')}
             className={`pb-3 transition-all ${
@@ -240,6 +282,7 @@ export default function RoleDetailPage() {
           >
             All Requirements ({role.requiredSkills.length + (role.preferredSkills?.length || 0)})
           </button>
+
           <button
             onClick={() => setActiveTab('responsibilities')}
             className={`pb-3 transition-all ${
@@ -255,6 +298,7 @@ export default function RoleDetailPage() {
         {/* Tab 1: 3-column Gap Breakdown */}
         {activeTab === 'gap' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
             {/* Column 1: Skills You Have */}
             <div className="card bg-emerald-50/20 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-800/60 p-5 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60 dark:border-emerald-800/60">
@@ -262,6 +306,7 @@ export default function RoleDetailPage() {
                   <CheckCircle2 size={16} className="text-emerald-500" />
                   Skills You Have
                 </h3>
+
                 <span className="badge badge-green text-xs">
                   {skillGroups.have.length}
                 </span>
@@ -282,14 +327,17 @@ export default function RoleDetailPage() {
                         <h4 className="text-xs font-bold text-slate-800 dark:text-white">
                           {s.name}
                         </h4>
+
                         <span className="text-[11px] text-slate-400">
                           {s.isEssential ? 'Essential' : 'Preferred'}
                         </span>
                       </div>
+
                       <div className="text-right">
                         <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 block">
                           {s.userProficiency}
                         </span>
+
                         <span className="text-[10px] text-slate-400">
                           Req: {s.proficiency}
                         </span>
@@ -307,6 +355,7 @@ export default function RoleDetailPage() {
                   <AlertTriangle size={16} className="text-amber-500" />
                   Skills to Improve
                 </h3>
+
                 <span className="badge badge-yellow text-xs">
                   {skillGroups.improve.length}
                 </span>
@@ -327,14 +376,17 @@ export default function RoleDetailPage() {
                         <h4 className="text-xs font-bold text-slate-800 dark:text-white">
                           {s.name}
                         </h4>
+
                         <span className="text-[11px] text-slate-400">
                           {s.isEssential ? 'Essential' : 'Preferred'}
                         </span>
                       </div>
+
                       <div className="text-right">
                         <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block">
                           Current: {s.userProficiency}
                         </span>
+
                         <span className="text-[10px] text-rose-500 font-medium">
                           Target: {s.proficiency}
                         </span>
@@ -352,6 +404,7 @@ export default function RoleDetailPage() {
                   <XCircle size={16} className="text-rose-500" />
                   Missing Skills
                 </h3>
+
                 <span className="badge badge-red text-xs">
                   {skillGroups.missing.length}
                 </span>
@@ -372,14 +425,17 @@ export default function RoleDetailPage() {
                         <h4 className="text-xs font-bold text-slate-800 dark:text-white">
                           {s.name}
                         </h4>
+
                         <span className="text-[11px] text-slate-400">
                           {s.isEssential ? 'Must-have' : 'Preferred'}
                         </span>
                       </div>
+
                       <div className="text-right">
                         <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 block">
                           Needs: {s.proficiency}
                         </span>
+
                         <span className="text-[10px] text-slate-400">
                           Not on profile
                         </span>
@@ -405,6 +461,7 @@ export default function RoleDetailPage() {
                   <th className="py-3 px-4">Status</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                 {[...role.requiredSkills, ...(role.preferredSkills || [])].map((req, i) => {
                   const userSkill = userSkills.find(
@@ -412,6 +469,7 @@ export default function RoleDetailPage() {
                       (us.skillId && us.skillId.toLowerCase() === req.skillId.toLowerCase()) ||
                       us.name.toLowerCase() === req.name.toLowerCase()
                   );
+
                   const isMet = userSkill && meetsRequirement(userSkill.proficiency, req.proficiency);
                   const isImprove = userSkill && !isMet;
 
@@ -420,18 +478,19 @@ export default function RoleDetailPage() {
                       <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
                         {req.name}
                       </td>
+
                       <td className="py-3 px-4">
-                        <span
-                          className={`badge text-[10px] ${
-                            req.isEssential ? 'badge-blue' : 'badge-gray'
-                          }`}
-                        >
+                        <span className={`badge text-[10px] ${
+                          req.isEssential ? 'badge-blue' : 'badge-gray'
+                        }`}>
                           {req.isEssential ? 'Essential' : 'Preferred'}
                         </span>
                       </td>
+
                       <td className="py-3 px-4 font-medium text-slate-600 dark:text-slate-300">
                         {req.proficiency}
                       </td>
+
                       <td className="py-3 px-4">
                         {userSkill ? (
                           <span className="font-semibold text-slate-800 dark:text-white">
@@ -441,6 +500,7 @@ export default function RoleDetailPage() {
                           <span className="text-slate-400 italic">Not Added</span>
                         )}
                       </td>
+
                       <td className="py-3 px-4">
                         {isMet ? (
                           <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
@@ -468,12 +528,14 @@ export default function RoleDetailPage() {
         {activeTab === 'responsibilities' && (
           <div className="card space-y-4 p-6 border border-slate-200 dark:border-slate-700">
             <h3 className="section-title">Core Responsibilities</h3>
+
             <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
               {role.responsibilities?.map((resp, idx) => (
                 <li key={idx} className="flex items-start gap-2.5">
                   <span className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-[11px] flex-shrink-0 mt-0.5">
                     {idx + 1}
                   </span>
+
                   <span className="leading-relaxed">{resp}</span>
                 </li>
               ))}
@@ -489,6 +551,7 @@ export default function RoleDetailPage() {
             <Sparkles size={18} />
             Bridge your skill gaps for {role.title}
           </h3>
+
           <p className="text-blue-100 text-xs sm:text-sm leading-relaxed">
             Generate a personalized 5-phase learning roadmap covering Fundamentals, Core Technical Skills, Frameworks, Projects, and Interview Prep.
           </p>
