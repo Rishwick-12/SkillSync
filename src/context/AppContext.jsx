@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -8,14 +7,26 @@ import React, {
 } from 'react';
 
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 import { roles } from '../data/roles';
 import { companies } from '../data/companies';
+import { skillsCatalog } from '../data/skills';
+import { initialNotifications } from '../data/notifications';
 import { generateRoadmap } from '../utils/roadmap';
 import { categorizeSkills } from '../utils/matching';
 
 const AppContext = createContext(null);
+
+const DEFAULT_STARTER_SKILLS = [
+  { id: 'react', skillId: 'react', name: 'React', category: 'Web Development', proficiency: 'Intermediate' },
+  { id: 'javascript', skillId: 'javascript', name: 'JavaScript', category: 'Web Development', proficiency: 'Advanced' },
+  { id: 'html', skillId: 'html', name: 'HTML', category: 'Web Development', proficiency: 'Advanced' },
+  { id: 'css', skillId: 'css', name: 'CSS', category: 'Web Development', proficiency: 'Intermediate' },
+  { id: 'nodejs', skillId: 'nodejs', name: 'Node.js', category: 'Web Development', proficiency: 'Beginner' },
+  { id: 'sql', skillId: 'sql', name: 'SQL', category: 'Databases', proficiency: 'Intermediate' },
+  { id: 'python', skillId: 'python', name: 'Python', category: 'Programming Languages', proficiency: 'Intermediate' },
+];
 
 export function AppProvider({ children }) {
   const { currentUser } = useAuth();
@@ -51,10 +62,9 @@ export function AppProvider({ children }) {
   const [savedRoadmaps, setSavedRoadmaps] = useState({});
   const [roadmapProgress, setRoadmapProgress] = useState({});
   const [recentlyViewed, setRecentlyViewed] = useState([]);
-
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Maps the frontend roadmap ID to its database UUID.
+  // Maps frontend roadmap ID to its database UUID when using Supabase
   const [roadmapDatabaseIds, setRoadmapDatabaseIds] = useState({});
 
   // --------------------------------------------------
@@ -82,169 +92,208 @@ export function AppProvider({ children }) {
       setDataLoading(true);
       setUser(currentUser);
 
+      // 1. Try loading from Supabase if configured
+      if (isSupabaseConfigured) {
+        try {
+          const userId = currentUser.id;
+
+          const results = await Promise.all([
+            supabase
+              .from('user_skills')
+              .select('id, skill_id, proficiency, skills(id, name, category)')
+              .eq('user_id', userId),
+
+            supabase
+              .from('user_notifications')
+              .select('*')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false }),
+
+            supabase
+              .from('user_bookmarks')
+              .select('company_id, role_id')
+              .eq('user_id', userId),
+
+            supabase
+              .from('user_roadmaps')
+              .select('*')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false }),
+
+            supabase
+              .from('recently_viewed')
+              .select('*')
+              .eq('user_id', userId)
+              .order('viewed_at', { ascending: false })
+              .limit(8),
+          ]);
+
+          if (!active) return;
+
+          const [
+            skillsResult,
+            notificationsResult,
+            bookmarksResult,
+            roadmapsResult,
+            recentlyViewedResult,
+          ] = results;
+
+          if (!skillsResult.error) {
+            setUserSkills(
+              (skillsResult.data || [])
+                .filter((row) => row.skills)
+                .map((row) => ({
+                  id: row.skill_id,
+                  skillId: row.skill_id,
+                  name: row.skills.name,
+                  category: row.skills.category,
+                  proficiency: row.proficiency,
+                }))
+            );
+          }
+
+          if (!notificationsResult.error) {
+            setNotifications(
+              (notificationsResult.data || []).map((row) => ({
+                id: row.id,
+                title: row.title,
+                message: row.message,
+                type: row.metadata?.originalType || row.type,
+                icon: row.icon || 'Bell',
+                link: row.link || null,
+                read: row.is_read,
+                timestamp: row.created_at,
+              }))
+            );
+          }
+
+          if (!bookmarksResult.error) {
+            setSavedCompanies(
+              (bookmarksResult.data || [])
+                .filter((row) => row.company_id)
+                .map((row) => row.company_id)
+            );
+            setSavedRoles(
+              (bookmarksResult.data || [])
+                .filter((row) => row.role_id)
+                .map((row) => row.role_id)
+            );
+          }
+
+          if (!roadmapsResult.error) {
+            const roadmapMap = {};
+            const progressMap = {};
+            const databaseIdMap = {};
+
+            (roadmapsResult.data || []).forEach((row) => {
+              const roadmap = row.roadmap_data;
+              if (!roadmap) return;
+              const frontendId = roadmap.id || row.id;
+
+              roadmapMap[frontendId] = {
+                ...roadmap,
+                id: frontendId,
+              };
+
+              progressMap[frontendId] = {
+                completedTasks: row.completed_tasks || [],
+                targetDate: row.target_date || null,
+              };
+
+              databaseIdMap[frontendId] = row.id;
+            });
+
+            setSavedRoadmaps(roadmapMap);
+            setRoadmapProgress(progressMap);
+            setRoadmapDatabaseIds(databaseIdMap);
+          }
+
+          if (!recentlyViewedResult.error) {
+            const viewedItems = (recentlyViewedResult.data || [])
+              .map((row) => {
+                if (row.company_id) {
+                  const company = companies.find((item) => item.id === row.company_id);
+                  return company
+                    ? {
+                        type: 'company',
+                        id: company.id,
+                        name: company.name,
+                        subtitle: `${company.industry || 'Company'} · ${company.location || ''}`,
+                      }
+                    : null;
+                }
+                if (row.role_id) {
+                  const role = roles.find((item) => item.id === row.role_id);
+                  return role
+                    ? {
+                        type: 'role',
+                        id: role.id,
+                        name: role.title,
+                        subtitle: `${role.category || 'Career'} · ${role.level || ''}`,
+                      }
+                    : null;
+                }
+                return null;
+              })
+              .filter(Boolean);
+
+            setRecentlyViewed(viewedItems);
+          }
+
+          setDataLoading(false);
+          return;
+        } catch (error) {
+          console.warn('Could not load data from Supabase, falling back to localStorage:', error);
+        }
+      }
+
+      // 2. Fallback to localStorage data
       try {
-        const userId = currentUser.id;
+        const storedSkills = localStorage.getItem('skillsync_user_skills');
+        if (storedSkills) {
+          setUserSkills(JSON.parse(storedSkills));
+        } else {
+          setUserSkills(DEFAULT_STARTER_SKILLS);
+          localStorage.setItem('skillsync_user_skills', JSON.stringify(DEFAULT_STARTER_SKILLS));
+        }
 
-        const results = await Promise.all([
-          supabase
-            .from('user_skills')
-            .select('id, skill_id, proficiency, skills(id, name, category)')
-            .eq('user_id', userId),
+        const storedNotifs = localStorage.getItem('skillsync_notifications');
+        if (storedNotifs) {
+          setNotifications(JSON.parse(storedNotifs));
+        } else {
+          setNotifications(initialNotifications);
+          localStorage.setItem('skillsync_notifications', JSON.stringify(initialNotifications));
+        }
 
-          supabase
-            .from('user_notifications')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false }),
+        const storedCompanies = localStorage.getItem('skillsync_saved_companies');
+        setSavedCompanies(storedCompanies ? JSON.parse(storedCompanies) : ['google', 'microsoft']);
 
-          supabase
-            .from('user_bookmarks')
-            .select('company_id, role_id')
-            .eq('user_id', userId),
+        const storedRoles = localStorage.getItem('skillsync_saved_roles');
+        setSavedRoles(storedRoles ? JSON.parse(storedRoles) : ['frontend-dev']);
 
-          supabase
-            .from('user_roadmaps')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false }),
+        const storedRoadmaps = localStorage.getItem('skillsync_saved_roadmaps');
+        setSavedRoadmaps(storedRoadmaps ? JSON.parse(storedRoadmaps) : {});
 
-          supabase
-            .from('recently_viewed')
-            .select('*')
-            .eq('user_id', userId)
-            .order('viewed_at', { ascending: false })
-            .limit(8),
+        const storedProgress = localStorage.getItem('skillsync_roadmap_progress');
+        setRoadmapProgress(storedProgress ? JSON.parse(storedProgress) : {});
+
+        const storedRecent = localStorage.getItem('skillsync_recently_viewed');
+        setRecentlyViewed(storedRecent ? JSON.parse(storedRecent) : [
+          {
+            type: 'company',
+            id: 'google',
+            name: 'Google',
+            subtitle: 'Technology · Global / Remote',
+          },
+          {
+            type: 'role',
+            id: 'frontend-dev',
+            name: 'Frontend Developer',
+            subtitle: 'Engineering · Mid-Level',
+          },
         ]);
-
-        if (!active) return;
-
-        const [
-          skillsResult,
-          notificationsResult,
-          bookmarksResult,
-          roadmapsResult,
-          recentlyViewedResult,
-        ] = results;
-
-        // Skills
-        if (skillsResult.error) throw skillsResult.error;
-
-        setUserSkills(
-          (skillsResult.data || [])
-            .filter((row) => row.skills)
-            .map((row) => ({
-              id: row.skill_id,
-              skillId: row.skill_id,
-              name: row.skills.name,
-              category: row.skills.category,
-              proficiency: row.proficiency,
-            }))
-        );
-
-        // Notifications
-        if (notificationsResult.error) throw notificationsResult.error;
-
-        setNotifications(
-          (notificationsResult.data || []).map((row) => ({
-            id: row.id,
-            title: row.title,
-            message: row.message,
-            type: row.metadata?.originalType || row.type,
-            icon: row.icon || 'Bell',
-            link: row.link || null,
-            read: row.is_read,
-            timestamp: row.created_at,
-          }))
-        );
-
-        // Bookmarks
-        if (bookmarksResult.error) throw bookmarksResult.error;
-
-        setSavedCompanies(
-          (bookmarksResult.data || [])
-            .filter((row) => row.company_id)
-            .map((row) => row.company_id)
-        );
-
-        setSavedRoles(
-          (bookmarksResult.data || [])
-            .filter((row) => row.role_id)
-            .map((row) => row.role_id)
-        );
-
-        // Roadmaps
-        if (roadmapsResult.error) throw roadmapsResult.error;
-
-        const roadmapMap = {};
-        const progressMap = {};
-        const databaseIdMap = {};
-
-        (roadmapsResult.data || []).forEach((row) => {
-          const roadmap = row.roadmap_data;
-
-          if (!roadmap) return;
-
-          const frontendId = roadmap.id || row.id;
-
-          roadmapMap[frontendId] = {
-            ...roadmap,
-            id: frontendId,
-          };
-
-          progressMap[frontendId] = {
-            completedTasks: row.completed_tasks || [],
-            targetDate: row.target_date || null,
-          };
-
-          databaseIdMap[frontendId] = row.id;
-        });
-
-        setSavedRoadmaps(roadmapMap);
-        setRoadmapProgress(progressMap);
-        setRoadmapDatabaseIds(databaseIdMap);
-
-        // Recently viewed
-        if (recentlyViewedResult.error) throw recentlyViewedResult.error;
-
-        const viewedItems = (recentlyViewedResult.data || [])
-          .map((row) => {
-            if (row.company_id) {
-              const company = companies.find(
-                (item) => item.id === row.company_id
-              );
-
-              return company
-                ? {
-                    type: 'company',
-                    id: company.id,
-                    name: company.name,
-                    subtitle: `${company.industry || 'Company'} · ${company.location || ''}`,
-                  }
-                : null;
-            }
-
-            if (row.role_id) {
-              const role = roles.find(
-                (item) => item.id === row.role_id
-              );
-
-              return role
-                ? {
-                    type: 'role',
-                    id: role.id,
-                    name: role.title,
-                    subtitle: `${role.category || 'Career'} · ${role.level || ''}`,
-                  }
-                : null;
-            }
-
-            return null;
-          })
-          .filter(Boolean);
-
-        setRecentlyViewed(viewedItems);
-      } catch (error) {
-        console.error('Error loading user application data:', error);
+      } catch (err) {
+        console.error('Error loading fallback data:', err);
       } finally {
         if (active) setDataLoading(false);
       }
@@ -280,56 +329,52 @@ export function AppProvider({ children }) {
       skill.id ||
       skill.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-    const { data: existingSkill, error: lookupError } = await supabase
-      .from('skills')
-      .select('id, name, category')
-      .eq('id', skillId)
-      .maybeSingle();
+    const matchedCatalogSkill = skillsCatalog.find(
+      (s) => s.id === skillId || s.name.toLowerCase() === skill.name.toLowerCase()
+    );
 
-    if (lookupError) throw lookupError;
-
-    if (!existingSkill) {
-      throw new Error(
-        `The skill "${skill.name}" was not found in the skills database.`
-      );
-    }
-
+    const skillName = matchedCatalogSkill?.name || skill.name;
+    const skillCategory = matchedCatalogSkill?.category || skill.category || 'General';
     const proficiency = skill.proficiency || 'Beginner';
 
-    const { error } = await supabase
-      .from('user_skills')
-      .upsert(
-        {
-          user_id: currentUser.id,
-          skill_id: skillId,
-          proficiency,
-        },
-        { onConflict: 'user_id,skill_id' }
-      );
-
-    if (error) throw error;
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_skills')
+          .upsert(
+            {
+              user_id: currentUser.id,
+              skill_id: skillId,
+              proficiency,
+            },
+            { onConflict: 'user_id,skill_id' }
+          );
+      } catch (err) {
+        console.warn('Could not sync skill with Supabase:', err);
+      }
+    }
 
     setUserSkills((previous) => {
-      const existing = previous.find((item) => item.id === skillId);
-
+      const existing = previous.find((item) => item.id === skillId || item.skillId === skillId);
       const updatedSkill = {
         id: skillId,
         skillId,
-        name: existingSkill.name,
-        category: existingSkill.category,
+        name: skillName,
+        category: skillCategory,
         proficiency,
       };
 
-      return existing
-        ? previous.map((item) =>
-            item.id === skillId ? updatedSkill : item
-          )
+      const updatedList = existing
+        ? previous.map((item) => (item.id === skillId || item.skillId === skillId ? updatedSkill : item))
         : [...previous, updatedSkill];
+
+      localStorage.setItem('skillsync_user_skills', JSON.stringify(updatedList));
+      return updatedList;
     });
 
     await addNotification({
       title: 'Skill Added',
-      message: `Added "${existingSkill.name}" (${proficiency}) to your skill profile. Your match scores have updated!`,
+      message: `Added "${skillName}" (${proficiency}) to your skill profile. Your match scores have updated!`,
       type: 'match',
       icon: 'Sparkles',
       link: '/matches',
@@ -339,39 +384,51 @@ export function AppProvider({ children }) {
   const removeSkill = async (skillId) => {
     if (!currentUser) return;
 
-    const { error } = await supabase
-      .from('user_skills')
-      .delete()
-      .eq('user_id', currentUser.id)
-      .eq('skill_id', skillId);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_skills')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('skill_id', skillId);
+      } catch (err) {
+        console.warn('Could not delete skill from Supabase:', err);
+      }
+    }
 
-    if (error) throw error;
-
-    setUserSkills((previous) =>
-      previous.filter(
+    setUserSkills((previous) => {
+      const filtered = previous.filter(
         (skill) => skill.id !== skillId && skill.skillId !== skillId
-      )
-    );
+      );
+      localStorage.setItem('skillsync_user_skills', JSON.stringify(filtered));
+      return filtered;
+    });
   };
 
   const updateSkillProficiency = async (skillId, newProficiency) => {
     if (!currentUser) return;
 
-    const { error } = await supabase
-      .from('user_skills')
-      .update({ proficiency: newProficiency })
-      .eq('user_id', currentUser.id)
-      .eq('skill_id', skillId);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_skills')
+          .update({ proficiency: newProficiency })
+          .eq('user_id', currentUser.id)
+          .eq('skill_id', skillId);
+      } catch (err) {
+        console.warn('Could not update proficiency in Supabase:', err);
+      }
+    }
 
-    if (error) throw error;
-
-    setUserSkills((previous) =>
-      previous.map((skill) =>
+    setUserSkills((previous) => {
+      const updated = previous.map((skill) =>
         skill.id === skillId || skill.skillId === skillId
           ? { ...skill, proficiency: newProficiency }
           : skill
-      )
-    );
+      );
+      localStorage.setItem('skillsync_user_skills', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // --------------------------------------------------
@@ -381,48 +438,40 @@ export function AppProvider({ children }) {
   const addNotification = async (notif) => {
     if (!currentUser) return;
 
-    const allowedTypes = ['info', 'success', 'warning', 'error'];
-
-    const databaseType = allowedTypes.includes(notif.type)
-      ? notif.type
-      : 'info';
-
-    const metadata = {
-      ...(notif.metadata || {}),
-      originalType: notif.type || 'info',
-    };
-
-    const { data, error } = await supabase
-      .from('user_notifications')
-      .insert({
-        user_id: currentUser.id,
-        title: notif.title,
-        message: notif.message,
-        type: databaseType,
-        icon: notif.icon || 'Bell',
-        link: notif.link || null,
-        metadata,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
     const newNotification = {
-      id: data.id,
-      title: data.title,
-      message: data.message,
-      type: metadata.originalType,
-      icon: data.icon,
-      link: data.link,
+      id: 'notif-' + Date.now(),
+      title: notif.title,
+      message: notif.message,
+      type: notif.type || 'info',
+      icon: notif.icon || 'Bell',
+      link: notif.link || null,
       read: false,
-      timestamp: data.created_at,
+      timestamp: new Date().toISOString(),
     };
 
-    setNotifications((previous) => [
-      newNotification,
-      ...previous,
-    ]);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_notifications')
+          .insert({
+            user_id: currentUser.id,
+            title: notif.title,
+            message: notif.message,
+            type: ['info', 'success', 'warning', 'error'].includes(notif.type) ? notif.type : 'info',
+            icon: notif.icon || 'Bell',
+            link: notif.link || null,
+            metadata: { originalType: notif.type || 'info' },
+          });
+      } catch (err) {
+        console.warn('Could not insert notification into Supabase:', err);
+      }
+    }
+
+    setNotifications((previous) => {
+      const updated = [newNotification, ...previous];
+      localStorage.setItem('skillsync_notifications', JSON.stringify(updated));
+      return updated;
+    });
 
     return newNotification;
   };
@@ -430,56 +479,72 @@ export function AppProvider({ children }) {
   const markNotificationRead = async (id) => {
     if (!currentUser) return;
 
-    const { error } = await supabase
-      .from('user_notifications')
-      .update({ is_read: true })
-      .eq('user_id', currentUser.id)
-      .eq('id', id);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_notifications')
+          .update({ is_read: true })
+          .eq('user_id', currentUser.id)
+          .eq('id', id);
+      } catch (err) {
+        console.warn('Could not update notification in Supabase:', err);
+      }
+    }
 
-    if (error) throw error;
-
-    setNotifications((previous) =>
-      previous.map((notification) =>
-        notification.id === id
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+    setNotifications((previous) => {
+      const updated = previous.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
+      );
+      localStorage.setItem('skillsync_notifications', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const markAllNotificationsRead = async () => {
     if (!currentUser) return;
 
-    const { error } = await supabase
-      .from('user_notifications')
-      .update({ is_read: true })
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_notifications')
+          .update({ is_read: true })
+          .eq('user_id', currentUser.id)
+          .eq('is_read', false);
+      } catch (err) {
+        console.warn('Could not update notifications in Supabase:', err);
+      }
+    }
 
-    if (error) throw error;
-
-    setNotifications((previous) =>
-      previous.map((notification) => ({
+    setNotifications((previous) => {
+      const updated = previous.map((notification) => ({
         ...notification,
         read: true,
-      }))
-    );
+      }));
+      localStorage.setItem('skillsync_notifications', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const dismissNotification = async (id) => {
     if (!currentUser) return;
 
-    const { error } = await supabase
-      .from('user_notifications')
-      .delete()
-      .eq('user_id', currentUser.id)
-      .eq('id', id);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('user_notifications')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('id', id);
+      } catch (err) {
+        console.warn('Could not delete notification from Supabase:', err);
+      }
+    }
 
-    if (error) throw error;
-
-    setNotifications((previous) =>
-      previous.filter((notification) => notification.id !== id)
-    );
+    setNotifications((previous) => {
+      const updated = previous.filter((notification) => notification.id !== id);
+      localStorage.setItem('skillsync_notifications', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // --------------------------------------------------
@@ -491,54 +556,55 @@ export function AppProvider({ children }) {
 
     const filterField = field === 'company' ? 'company_id' : 'role_id';
 
-    const { data: existing, error: lookupError } = await supabase
-      .from('user_bookmarks')
-      .select('user_id')
-      .eq('user_id', currentUser.id)
-      .eq(filterField, value)
-      .maybeSingle();
+    if (isSupabaseConfigured) {
+      try {
+        const { data: existing } = await supabase
+          .from('user_bookmarks')
+          .select('user_id')
+          .eq('user_id', currentUser.id)
+          .eq(filterField, value)
+          .maybeSingle();
 
-    if (lookupError) throw lookupError;
-
-    if (existing) {
-      const { error } = await supabase
-        .from('user_bookmarks')
-        .delete()
-        .eq('user_id', currentUser.id)
-        .eq(filterField, value);
-
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('user_bookmarks')
-        .insert({
-          user_id: currentUser.id,
-          [filterField]: value,
-        });
-
-      if (error) throw error;
+        if (existing) {
+          await supabase
+            .from('user_bookmarks')
+            .delete()
+            .eq('user_id', currentUser.id)
+            .eq(filterField, value);
+        } else {
+          await supabase
+            .from('user_bookmarks')
+            .insert({
+              user_id: currentUser.id,
+              [filterField]: value,
+            });
+        }
+      } catch (err) {
+        console.warn('Could not toggle bookmark in Supabase:', err);
+      }
     }
 
     if (field === 'company') {
-      setSavedCompanies((previous) =>
-        existing
+      setSavedCompanies((previous) => {
+        const updated = previous.includes(value)
           ? previous.filter((id) => id !== value)
-          : [...previous, value]
-      );
+          : [...previous, value];
+        localStorage.setItem('skillsync_saved_companies', JSON.stringify(updated));
+        return updated;
+      });
     } else {
-      setSavedRoles((previous) =>
-        existing
+      setSavedRoles((previous) => {
+        const updated = previous.includes(value)
           ? previous.filter((id) => id !== value)
-          : [...previous, value]
-      );
+          : [...previous, value];
+        localStorage.setItem('skillsync_saved_roles', JSON.stringify(updated));
+        return updated;
+      });
     }
   };
 
-  const toggleSaveCompany = (companyId) =>
-    toggleBookmark('company', companyId);
-
-  const toggleSaveRole = (roleId) =>
-    toggleBookmark('role', roleId);
+  const toggleSaveCompany = (companyId) => toggleBookmark('company', companyId);
+  const toggleSaveRole = (roleId) => toggleBookmark('role', roleId);
 
   // --------------------------------------------------
   // ROADMAPS
@@ -554,45 +620,58 @@ export function AppProvider({ children }) {
       throw new Error('This roadmap is missing its role ID.');
     }
 
-    const { data, error } = await supabase
-      .from('user_roadmaps')
-      .insert({
-        user_id: currentUser.id,
-        role_id: roleId,
-        company_id: companyId,
-        progress: 0,
-        completed_tasks: [],
-        roadmap_data: roadmap,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const frontendId = roadmap.id || data.id;
-
+    const frontendId = roadmap.id || `roadmap-${Date.now()}`;
     const savedRoadmap = {
       ...roadmap,
       id: frontendId,
     };
 
-    setSavedRoadmaps((previous) => ({
-      ...previous,
-      [frontendId]: savedRoadmap,
-    }));
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = await supabase
+          .from('user_roadmaps')
+          .insert({
+            user_id: currentUser.id,
+            role_id: roleId,
+            company_id: companyId,
+            progress: 0,
+            completed_tasks: [],
+            roadmap_data: roadmap,
+          })
+          .select()
+          .single();
 
-    setRoadmapDatabaseIds((previous) => ({
-      ...previous,
-      [frontendId]: data.id,
-    }));
+        if (data?.id) {
+          setRoadmapDatabaseIds((previous) => ({
+            ...previous,
+            [frontendId]: data.id,
+          }));
+        }
+      } catch (err) {
+        console.warn('Could not save roadmap to Supabase:', err);
+      }
+    }
 
-    setRoadmapProgress((previous) => ({
-      ...previous,
-      [frontendId]: {
-        completedTasks: [],
-        targetDate: null,
-      },
-    }));
+    setSavedRoadmaps((previous) => {
+      const updated = {
+        ...previous,
+        [frontendId]: savedRoadmap,
+      };
+      localStorage.setItem('skillsync_saved_roadmaps', JSON.stringify(updated));
+      return updated;
+    });
+
+    setRoadmapProgress((previous) => {
+      const updated = {
+        ...previous,
+        [frontendId]: {
+          completedTasks: [],
+          targetDate: null,
+        },
+      };
+      localStorage.setItem('skillsync_roadmap_progress', JSON.stringify(updated));
+      return updated;
+    });
 
     await addNotification({
       title: 'Roadmap Generated',
@@ -606,57 +685,31 @@ export function AppProvider({ children }) {
   const deleteRoadmap = async (roadmapId) => {
     if (!currentUser) return;
 
-    const databaseId = roadmapDatabaseIds[roadmapId];
-
-    if (!databaseId) {
-      throw new Error('Could not find this roadmap in your account.');
+    if (isSupabaseConfigured && roadmapDatabaseIds[roadmapId]) {
+      try {
+        await supabase
+          .from('user_roadmaps')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('id', roadmapDatabaseIds[roadmapId]);
+      } catch (err) {
+        console.warn('Could not delete roadmap from Supabase:', err);
+      }
     }
-
-    const { error } = await supabase
-      .from('user_roadmaps')
-      .delete()
-      .eq('user_id', currentUser.id)
-      .eq('id', databaseId);
-
-    if (error) throw error;
 
     setSavedRoadmaps((previous) => {
       const copy = { ...previous };
       delete copy[roadmapId];
+      localStorage.setItem('skillsync_saved_roadmaps', JSON.stringify(copy));
       return copy;
     });
 
     setRoadmapProgress((previous) => {
       const copy = { ...previous };
       delete copy[roadmapId];
+      localStorage.setItem('skillsync_roadmap_progress', JSON.stringify(copy));
       return copy;
     });
-
-    setRoadmapDatabaseIds((previous) => {
-      const copy = { ...previous };
-      delete copy[roadmapId];
-      return copy;
-    });
-  };
-
-  const updateRoadmapProgressInDatabase = async (
-    roadmapId,
-    progressData
-  ) => {
-    const databaseId = roadmapDatabaseIds[roadmapId];
-
-    if (!currentUser || !databaseId) return;
-
-    const { error } = await supabase
-      .from('user_roadmaps')
-      .update({
-        completed_tasks: progressData.completedTasks || [],
-        target_date: progressData.targetDate || null,
-      })
-      .eq('user_id', currentUser.id)
-      .eq('id', databaseId);
-
-    if (error) throw error;
   };
 
   const toggleRoadmapTask = async (roadmapId, taskId) => {
@@ -666,7 +719,6 @@ export function AppProvider({ children }) {
     };
 
     const taskSet = new Set(current.completedTasks || []);
-
     if (taskSet.has(taskId)) {
       taskSet.delete(taskId);
     } else {
@@ -678,12 +730,14 @@ export function AppProvider({ children }) {
       completedTasks: Array.from(taskSet),
     };
 
-    await updateRoadmapProgressInDatabase(roadmapId, updated);
-
-    setRoadmapProgress((previous) => ({
-      ...previous,
-      [roadmapId]: updated,
-    }));
+    setRoadmapProgress((previous) => {
+      const allUpdated = {
+        ...previous,
+        [roadmapId]: updated,
+      };
+      localStorage.setItem('skillsync_roadmap_progress', JSON.stringify(allUpdated));
+      return allUpdated;
+    });
   };
 
   const setRoadmapTargetDate = async (roadmapId, date) => {
@@ -697,12 +751,14 @@ export function AppProvider({ children }) {
       targetDate: date,
     };
 
-    await updateRoadmapProgressInDatabase(roadmapId, updated);
-
-    setRoadmapProgress((previous) => ({
-      ...previous,
-      [roadmapId]: updated,
-    }));
+    setRoadmapProgress((previous) => {
+      const allUpdated = {
+        ...previous,
+        [roadmapId]: updated,
+      };
+      localStorage.setItem('skillsync_roadmap_progress', JSON.stringify(allUpdated));
+      return allUpdated;
+    });
   };
 
   // --------------------------------------------------
@@ -712,36 +768,13 @@ export function AppProvider({ children }) {
   const addToRecentlyViewed = async (item) => {
     if (!currentUser) return;
 
-    const isCompany = item.type === 'company';
-    const field = isCompany ? 'company_id' : 'role_id';
-
-    const record = {
-      user_id: currentUser.id,
-      company_id: isCompany ? item.id : null,
-      role_id: isCompany ? null : item.id,
-      viewed_at: new Date().toISOString(),
-    };
-
-    const { error: deleteError } = await supabase
-      .from('recently_viewed')
-      .delete()
-      .eq('user_id', currentUser.id)
-      .eq(field, item.id);
-
-    if (deleteError) throw deleteError;
-
-    const { error: insertError } = await supabase
-      .from('recently_viewed')
-      .insert(record);
-
-    if (insertError) throw insertError;
-
     setRecentlyViewed((previous) => {
       const filtered = previous.filter(
         (entry) => !(entry.type === item.type && entry.id === item.id)
       );
-
-      return [item, ...filtered].slice(0, 8);
+      const updated = [item, ...filtered].slice(0, 8);
+      localStorage.setItem('skillsync_recently_viewed', JSON.stringify(updated));
+      return updated;
     });
   };
 
@@ -751,9 +784,7 @@ export function AppProvider({ children }) {
 
   const generateAndSaveRoadmap = async (role, missing, improve, company) => {
     const roadmap = generateRoadmap(role, missing, improve, company);
-
     await saveRoadmap(roadmap);
-
     return roadmap;
   };
 

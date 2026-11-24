@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, LayoutDashboard, Code2, Building2, Target, Map, Bookmark,
-  Bell, User, Settings, LogOut, Menu, X, ChevronRight, Sparkles
+  Bell, User, Settings, LogOut, Menu, X, ChevronRight, Sparkles,
+  Sun, Moon
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,49 +22,54 @@ const navItems = [
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { notifications, user } = useApp();
+  const { notifications, user, theme, toggleTheme } = useApp();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = (notifications || []).filter(n => !n.read).length;
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  // Resolve current active page title for header breadcrumb
+  const currentNavItem = navItems.find(item => location.pathname.startsWith(item.to));
+  const pageTitle = currentNavItem?.label || 'Workspace';
+
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-800">
+    <div className="flex flex-col h-full bg-white dark:bg-[#0E1015]">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-200 dark:border-slate-700">
+      <div className="h-14 px-4 flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08]">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-sm group-hover:bg-blue-700 transition-colors">
-            <Sparkles className="w-5 h-5" />
+          <div className="w-7 h-7 bg-slate-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-slate-900 shadow-sm transition-transform group-hover:scale-105">
+            <Sparkles className="w-3.5 h-3.5" />
           </div>
           <div>
-            <span className="text-lg font-bold text-slate-900 dark:text-white">
-              Skill<span className="text-blue-600">Sync</span>
+            <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
+              Skill<span className="text-brand-600 dark:text-brand-400">Sync</span>
             </span>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium -mt-0.5">
-              Career Matching
-            </p>
           </div>
         </Link>
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 text-slate-500 uppercase tracking-wider">
+          v1.0
+        </span>
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         <NavLink
           to="/"
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
         >
-          <Home className="w-4.5 h-4.5 flex-shrink-0" size={18} />
-          <span className="flex-1">Home Page</span>
+          <Home className="w-4 h-4 flex-shrink-0 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200" />
+          <span className="flex-1">Home Overview</span>
         </NavLink>
 
-        <div className="pt-2 pb-1 px-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Workspace
+        <div className="pt-4 pb-1.5 px-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
+            Platform
           </span>
         </div>
 
@@ -72,12 +78,12 @@ export default function DashboardLayout() {
             key={to}
             to={to}
             onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `sidebar-link group ${isActive ? 'active' : ''}`}
           >
-            <Icon className="w-4.5 h-4.5 flex-shrink-0" size={18} />
-            <span className="flex-1">{label}</span>
+            <Icon className="w-4 h-4 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <span className="flex-1 truncate">{label}</span>
             {badge && unreadCount > 0 && (
-              <span className="bg-blue-600 text-white text-[11px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              <span className="bg-brand-600 text-white font-mono text-[10px] font-semibold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -85,52 +91,59 @@ export default function DashboardLayout() {
         ))}
       </nav>
 
-      {/* User Info & Logout Footer */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
+      {/* User Info & Footer */}
+      <div className="p-3 border-t border-slate-200/80 dark:border-white/[0.08] space-y-1 bg-slate-50/50 dark:bg-white/[0.01]">
         <div 
-          className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer transition-colors" 
+          className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/[0.05] cursor-pointer transition-colors" 
           onClick={() => navigate('/profile')}
         >
-          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold text-sm flex items-center justify-center flex-shrink-0">
+          <div className="w-7 h-7 rounded-md bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-semibold text-xs flex items-center justify-center flex-shrink-0 border border-brand-200/60 dark:border-brand-800/40">
             {user?.name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+            <p className="text-xs font-medium text-slate-900 dark:text-slate-200 truncate leading-tight">
               {user?.name || 'Candidate'}
             </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-tight mt-0.5">
               {user?.email || 'demo@skillsync.app'}
             </p>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
         </div>
 
         <button 
           onClick={handleLogout} 
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 rounded-md transition-colors font-medium"
         >
-          <LogOut size={15} />
-          Sign Out
+          <LogOut size={13} />
+          <span>Sign Out</span>
         </button>
       </div>
     </div>
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-slate-900 dark:text-slate-100 font-sans">
+    <div className="flex h-screen bg-[#F9FAFB] dark:bg-[#0B0D11] overflow-hidden text-slate-900 dark:text-slate-100 font-sans">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-slate-200 dark:border-slate-700 flex-shrink-0">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-slate-200/80 dark:border-white/[0.08] flex-shrink-0 z-20">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Drawer Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-slate-800 shadow-2xl">
-            <div className="absolute top-4 right-4 z-10">
-              <button onClick={() => setSidebarOpen(false)} className="btn-ghost p-1.5 rounded-lg text-slate-500">
-                <X size={20} />
+        <div className="fixed inset-0 z-50 lg:hidden animate-fade-in">
+          <div 
+            className="fixed inset-0 bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm" 
+            onClick={() => setSidebarOpen(false)} 
+          />
+          <aside className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0E1015] shadow-2xl z-10 animate-slide-in">
+            <div className="absolute top-3 right-3 z-20">
+              <button 
+                onClick={() => setSidebarOpen(false)} 
+                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
+                aria-label="Close menu"
+              >
+                <X size={18} />
               </button>
             </div>
             <SidebarContent />
@@ -140,27 +153,47 @@ export default function DashboardLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-2 -ml-2 text-slate-600">
-              <Menu size={20} />
+        {/* Top Header Bar */}
+        <header className="h-14 px-4 sm:px-6 bg-white/80 dark:bg-[#0B0D11]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between flex-shrink-0 z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="lg:hidden p-1.5 -ml-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+              aria-label="Open sidebar"
+            >
+              <Menu size={18} />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-                <Sparkles size={16} />
-              </div>
-              <span className="font-bold text-slate-900 dark:text-white">
-                Skill<span className="text-blue-600">Sync</span>
-              </span>
+            
+            {/* Breadcrumb indicator */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="hidden sm:inline">Workspace</span>
+              <span className="hidden sm:inline text-slate-300 dark:text-white/20">/</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{pageTitle}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <NavLink to="/notifications" className="relative btn-ghost p-2 text-slate-600">
-              <Bell size={18} />
+          {/* Header Action Tools */}
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={() => toggleTheme()}
+              className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
+            {/* Notifications Button */}
+            <NavLink
+              to="/notifications"
+              className="relative p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+              aria-label="View notifications"
+            >
+              <Bell size={15} />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full" />
               )}
             </NavLink>
           </div>

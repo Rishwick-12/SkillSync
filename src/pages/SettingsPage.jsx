@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Sun,
   Moon,
-  Monitor,
   Bell,
   Sliders,
   Database,
@@ -13,7 +12,7 @@ import {
   RotateCcw,
   Shield,
   Download,
-  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +63,7 @@ export default function SettingsPage() {
     }
   });
 
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [exportNotice, setExportNotice] = useState(false);
 
   const toggleNotif = (key) => {
     setNotificationSettings((prev) => {
@@ -100,6 +99,9 @@ export default function SettingsPage() {
     dlAnchor.setAttribute('href', dataStr);
     dlAnchor.setAttribute('download', `skillsync_backup_${Date.now()}.json`);
     dlAnchor.click();
+
+    setExportNotice(true);
+    setTimeout(() => setExportNotice(false), 3000);
   };
 
   const handleLogout = () => {
@@ -111,80 +113,84 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
           Application Settings & Preferences
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
           Customize UI appearance, notification frequencies, and local browser storage management.
         </p>
       </div>
 
       {/* 1. Appearance / Theme */}
-      <div className="card space-y-4">
-        <h3 className="section-title flex items-center gap-2">
-          {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-          Interface Theme
-        </h3>
-        <p className="text-xs text-slate-500">
-          Select between light and dark modes. Settings are preserved across browser refreshes.
-        </p>
+      <div className="card p-5 sm:p-6 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+            Interface Theme
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Select between light and dark modes. Settings are preserved across browser sessions.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 max-w-md pt-1">
+        <div className="grid grid-cols-2 gap-3 max-w-md">
           <button
             type="button"
             onClick={() => toggleTheme('light')}
-            className={`p-4 rounded-xl border flex items-center gap-3 transition-all ${
+            className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all text-left ${
               theme === 'light'
-                ? 'border-indigo-600 bg-indigo-50/50 text-indigo-700 ring-2 ring-indigo-500/20 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-1 ring-indigo-500/20 shadow-xs'
+                : 'border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.14] text-slate-700 dark:text-slate-300'
             }`}
           >
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
-              <Sun size={18} />
+            <div className="w-8 h-8 rounded-lg bg-amber-100/80 text-amber-600 flex items-center justify-center flex-shrink-0">
+              <Sun size={16} />
             </div>
-            <div className="text-left">
-              <strong className="block text-sm font-semibold">Light Mode</strong>
-              <span className="text-xs text-slate-400">Crisp slate & white</span>
+            <div>
+              <strong className="block text-xs font-semibold">Light Mode</strong>
+              <span className="text-[11px] text-slate-500">Clean slate & white</span>
             </div>
           </button>
 
           <button
             type="button"
             onClick={() => toggleTheme('dark')}
-            className={`p-4 rounded-xl border flex items-center gap-3 transition-all ${
+            className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all text-left ${
               theme === 'dark'
-                ? 'border-indigo-500 bg-slate-800 text-white ring-2 ring-indigo-500/30 shadow-sm'
-                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                ? 'border-indigo-500/80 bg-indigo-950/20 text-white ring-1 ring-indigo-500/30 shadow-xs'
+                : 'border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.14] text-slate-700 dark:text-slate-300'
             }`}
           >
-            <div className="w-8 h-8 rounded-lg bg-indigo-900/60 text-indigo-400 flex items-center justify-center">
-              <Moon size={18} />
+            <div className="w-8 h-8 rounded-lg bg-indigo-900/40 text-indigo-400 flex items-center justify-center flex-shrink-0">
+              <Moon size={16} />
             </div>
-            <div className="text-left">
-              <strong className="block text-sm font-semibold">Dark Mode</strong>
-              <span className="text-xs text-slate-400">Deep slate & indigo</span>
+            <div>
+              <strong className="block text-xs font-semibold">Dark Mode</strong>
+              <span className="text-[11px] text-slate-400">Deep obsidian & indigo</span>
             </div>
           </button>
         </div>
       </div>
 
       {/* 2. Notification Preferences */}
-      <div className="card space-y-4">
-        <h3 className="section-title flex items-center gap-2">
-          <Bell size={18} />
-          Notification Preferences
-        </h3>
-        <p className="text-xs text-slate-500">
-          Configure which events trigger updates in your in-app notification center.
-        </p>
+      <div className="card p-5 sm:p-6 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Bell size={16} />
+            Notification Preferences
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Configure which events trigger alerts in your in-app notification center.
+          </p>
+        </div>
 
-        <div className="space-y-3 pt-1 divide-y divide-slate-100 dark:divide-slate-700/60">
+        <div className="space-y-3 pt-1 divide-y divide-slate-100 dark:divide-white/[0.06]">
           <div className="flex items-center justify-between pt-2">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 dark:text-white">
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-medium text-slate-900 dark:text-white">
                 Role Compatibility Shifts
               </h4>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Notify when newly added skills increase match scores for target roles.
               </p>
             </div>
@@ -197,11 +203,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between pt-3">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 dark:text-white">
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-medium text-slate-900 dark:text-white">
                 Roadmap Milestones & Target Reminders
               </h4>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Reminders when roadmap milestones or target completion dates approach.
               </p>
             </div>
@@ -214,11 +220,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between pt-3">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 dark:text-white">
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-medium text-slate-900 dark:text-white">
                 Curated Learning Resources
               </h4>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Suggestions for documentation, courses, and interview guides matching your gaps.
               </p>
             </div>
@@ -233,11 +239,16 @@ export default function SettingsPage() {
       </div>
 
       {/* 3. Account Preferences */}
-      <div className="card space-y-4">
-        <h3 className="section-title flex items-center gap-2">
-          <Sliders size={18} />
-          Account & Match Preferences
-        </h3>
+      <div className="card p-5 sm:p-6 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Sliders size={16} />
+            Account & Match Preferences
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Configure default units and job search filtering parameters.
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
           <div>
@@ -249,7 +260,7 @@ export default function SettingsPage() {
                 setAccountPrefs(updated);
                 localStorage.setItem('skillsync_settings_prefs', JSON.stringify(updated));
               }}
-              className="input-field"
+              className="input-field text-xs"
             >
               <option value="INR (₹)">INR (₹ - Lakhs per annum)</option>
               <option value="USD ($)">USD ($ - Annual compensation)</option>
@@ -266,7 +277,7 @@ export default function SettingsPage() {
                 setAccountPrefs(updated);
                 localStorage.setItem('skillsync_settings_prefs', JSON.stringify(updated));
               }}
-              className="input-field"
+              className="input-field text-xs"
             >
               <option value="Hybrid & Remote">Hybrid & Remote (Flexible)</option>
               <option value="Remote Only">Remote Only</option>
@@ -277,48 +288,59 @@ export default function SettingsPage() {
       </div>
 
       {/* 4. Local Storage & Data Management */}
-      <div className="card space-y-4">
-        <h3 className="section-title flex items-center gap-2">
-          <Database size={18} />
-          Browser Data Management (localStorage)
-        </h3>
-        <p className="text-xs text-slate-500">
-          All your profile information, custom skills, roadmaps, and favorites exist purely in your browser storage.
-        </p>
+      <div className="card p-5 sm:p-6 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Database size={16} />
+            Browser Data Management (localStorage)
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            All profile information, custom skills, roadmaps, and favorites exist purely in client-side browser storage.
+          </p>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-3 pt-1">
+        {exportNotice && (
+          <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex items-center gap-2">
+            <CheckCircle2 size={13} />
+            Data backup downloaded successfully.
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
           <button
             onClick={handleExportData}
             className="btn-secondary text-xs flex items-center gap-1.5"
           >
-            <Download size={14} />
-            Export My Data Backup (JSON)
+            <Download size={13} />
+            Export Data Backup (JSON)
           </button>
 
           <button
             onClick={handleResetData}
             className="btn-secondary text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 flex items-center gap-1.5"
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={13} />
             Reset to Factory Demo State
           </button>
         </div>
       </div>
 
       {/* 5. Session / Sign Out */}
-      <div className="card border-red-200 dark:border-red-900/60 bg-red-50/20 dark:bg-red-950/10 space-y-3">
-        <h3 className="text-sm font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
-          <Shield size={16} />
+      <div className="card p-5 sm:p-6 border-rose-200/80 dark:border-rose-900/40 bg-rose-50/20 dark:bg-rose-950/10 space-y-3">
+        <h3 className="text-sm font-semibold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+          <Shield size={15} />
           Demo Session Management
         </h3>
         <p className="text-xs text-slate-600 dark:text-slate-400">
-          Sign out of your current session. You can sign back in anytime using the prefilled demo account.
+          Sign out of your active session. You can sign back in at any time with the preconfigured demo account.
         </p>
 
-        <button onClick={handleLogout} className="btn-danger text-xs">
-          <LogOut size={14} />
-          Sign Out of SkillSync
-        </button>
+        <div>
+          <button onClick={handleLogout} className="btn-danger text-xs">
+            <LogOut size={13} />
+            Sign Out of SkillSync
+          </button>
+        </div>
       </div>
     </div>
   );

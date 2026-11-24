@@ -36,30 +36,26 @@ export default function CompaniesPage() {
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [minMatchPercentage, setMinMatchPercentage] = useState(0);
-  const [sortBy, setSortBy] = useState('match'); // 'match' | 'name' | 'rating' | 'roles'
+  const [sortBy, setSortBy] = useState('match');
 
   // Map roles and calculate match statistics per company
   const companyCompatibility = useMemo(() => {
     return companies.map((company) => {
-      // Find role objects for this company
       const companyRoles = roles.filter((r) =>
         company.roles.includes(r.id) || r.companyIds?.includes(company.id)
       );
 
-      // Compute match for each role
       const matches = companyRoles.map((role) => ({
         role,
         match: calculateMatch(userSkills, role),
       }));
 
-      // Top role match for this company
       const sortedMatches = [...matches].sort((a, b) => b.match.percentage - a.match.percentage);
       const bestMatch = sortedMatches[0] || {
         role: null,
         match: { percentage: 0, matchingCount: 0, missingRequiredSkills: [] },
       };
 
-      // Aggregated skills overlap across company roles
       const allMatchingCount = bestMatch.match.matchingCount || 0;
       const allMissingCount = bestMatch.match.missingRequiredSkills?.length || 0;
 
@@ -125,74 +121,72 @@ export default function CompaniesPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Illustrative Disclaimer */}
-      <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-        <div className="text-xs text-amber-800 dark:text-amber-300">
-          <span className="font-bold">Illustrative Mock Hiring Data:</span> All company profiles, salary figures, and job requirements displayed on SkillSync represent simulated educational demo benchmarks, not real-time or verified hiring commitments from these organizations.
+      <div className="p-3.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 flex items-start gap-2.5">
+        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+          <span className="font-semibold">Illustrative Benchmark Data:</span> Profiles, compensations, and role requirements shown represent educational career benchmarks for skill matching simulation.
         </div>
       </div>
 
-      {/* Page Header & Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Page Header & Segmented Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">
             Company Discovery
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Discover tech employers hiring for roles that align with your current and target skillset.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Discover technology employers with open roles matched to your current technical stack.
           </p>
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl self-start md:self-auto border border-slate-200 dark:border-slate-700">
+        <div className="flex bg-slate-100 dark:bg-white/[0.05] p-0.5 rounded-lg self-start sm:self-auto border border-slate-200/60 dark:border-white/[0.06]">
           <button
             onClick={() => setActiveTab('skills')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
               activeTab === 'skills'
-                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-[#181C24] text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Sparkles size={14} />
-            Find by Skills
+            <Sparkles size={13} className="text-brand-500" />
+            <span>Find by Skills</span>
           </button>
           <button
             onClick={() => setActiveTab('directory')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
               activeTab === 'directory'
-                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-[#181C24] text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Building2 size={14} />
-            Browse Directory
+            <Building2 size={13} />
+            <span>Directory</span>
           </button>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="card p-4 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search Box */}
+      <div className="card p-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search company or role..."
-              className="input-field pl-9 py-2 text-xs"
+              className="input-field pl-8 py-1.5 text-xs"
             />
           </div>
 
-          {/* Industry Filter */}
           <div>
             <select
               value={selectedIndustry}
               onChange={(e) => setSelectedIndustry(e.target.value)}
-              className="input-field py-2 text-xs"
+              className="input-field py-1.5 text-xs bg-white dark:bg-[#12151B]"
             >
               {industries.map((ind) => (
                 <option key={ind} value={ind}>
@@ -202,12 +196,11 @@ export default function CompaniesPage() {
             </select>
           </div>
 
-          {/* Job Category */}
           <div>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="input-field py-2 text-xs"
+              className="input-field py-1.5 text-xs bg-white dark:bg-[#12151B]"
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
@@ -217,27 +210,26 @@ export default function CompaniesPage() {
             </select>
           </div>
 
-          {/* Sort By */}
           <div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="input-field py-2 text-xs"
+              className="input-field py-1.5 text-xs bg-white dark:bg-[#12151B]"
             >
               <option value="match">Sort: Highest Match %</option>
               <option value="name">Sort: Company Name (A-Z)</option>
               <option value="rating">Sort: Glassdoor Rating</option>
-              <option value="roles">Sort: Most Roles Open</option>
+              <option value="roles">Sort: Open Roles Count</option>
             </select>
           </div>
         </div>
 
         {/* Min Match Slider (Only active in Skills tab) */}
         {activeTab === 'skills' && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.06] text-xs">
             <div className="flex items-center gap-3 w-full sm:w-80">
-              <span className="text-slate-500 font-medium whitespace-nowrap">
-                Min Match %: <strong className="text-blue-600">{minMatchPercentage}%</strong>
+              <span className="text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap text-[11px]">
+                Min Match %: <span className="font-mono font-semibold text-slate-900 dark:text-white">{minMatchPercentage}%</span>
               </span>
               <input
                 type="range"
@@ -246,11 +238,11 @@ export default function CompaniesPage() {
                 step="5"
                 value={minMatchPercentage}
                 onChange={(e) => setMinMatchPercentage(Number(e.target.value))}
-                className="w-full accent-blue-600 cursor-pointer"
+                className="w-full accent-slate-900 dark:accent-white cursor-pointer h-1.5 bg-slate-200 dark:bg-white/10 rounded-lg appearance-none"
               />
             </div>
-            <span className="text-slate-400">
-              Showing {filteredCompanies.length} of {companies.length} companies
+            <span className="text-slate-400 font-mono text-[11px]">
+              Showing {filteredCompanies.length} of {companies.length} employers
             </span>
           </div>
         )}
@@ -270,14 +262,14 @@ export default function CompaniesPage() {
                 setSelectedCategory('All');
                 setMinMatchPercentage(0);
               }}
-              className="btn-secondary text-xs"
+              className="btn-secondary text-xs px-3 py-1.5"
             >
               Reset Filters
             </button>
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCompanies.map(
             ({
               company,
@@ -292,24 +284,24 @@ export default function CompaniesPage() {
               return (
                 <div
                   key={company.id}
-                  className="card card-hover flex flex-col justify-between border border-slate-200/80 dark:border-slate-700 relative group"
+                  className="card card-hover flex flex-col justify-between p-4 sm:p-5 border border-slate-200/80 dark:border-white/[0.06] relative group"
                 >
-                  <div>
-                    {/* Card Top: Logo, Name, Bookmark */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:bg-slate-700 flex items-center justify-center text-2xl font-bold border border-indigo-100 dark:border-slate-600 flex-shrink-0">
+                  <div className="space-y-3">
+                    {/* Card Top: Logo, Name, Rating, Bookmark */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center text-lg font-bold flex-shrink-0 text-slate-800 dark:text-slate-200">
                           {company.logo || company.name.charAt(0)}
                         </div>
-                        <div>
-                          <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-indigo-600 transition-colors">
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-slate-900 dark:text-white text-sm truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                             {company.name}
                           </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                            <span>{company.industry}</span>
-                            <span>•</span>
-                            <span className="flex items-center text-amber-500 font-semibold">
-                              <Star size={12} className="fill-amber-400 mr-0.5" />
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <span className="truncate">{company.industry}</span>
+                            <span>·</span>
+                            <span className="flex items-center font-mono font-medium text-amber-600 dark:text-amber-400">
+                              <Star size={10} className="fill-current mr-0.5" />
                               {company.rating || '4.5'}
                             </span>
                           </p>
@@ -318,35 +310,36 @@ export default function CompaniesPage() {
 
                       <button
                         onClick={() => toggleSaveCompany(company.id)}
-                        className={`p-2 rounded-xl border transition-all ${
+                        className={`p-1.5 rounded-md border transition-all ${
                           isSaved
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 border-indigo-200 dark:border-indigo-800'
-                            : 'text-slate-400 hover:text-slate-600 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+                            ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-300 border-brand-200/80 dark:border-brand-800/40'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.06]'
                         }`}
                         title={isSaved ? 'Remove from Saved' : 'Save to Favorites'}
+                        aria-label={isSaved ? 'Remove from saved' : 'Save company'}
                       >
-                        {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                        {isSaved ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
                       </button>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 mb-4 leading-relaxed">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                       {company.description}
                     </p>
 
-                    {/* Skill-Based Match Indicator Banner */}
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-100 dark:border-slate-700/60 mb-4">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Top Role Match:
+                    {/* Skill Match Box */}
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono text-slate-400 uppercase">
+                          Top Role Match
                         </span>
                         <MatchBadge percentage={matchPercentage} size="sm" />
                       </div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                         {bestMatchRole?.title || 'Open Positions'}
                       </p>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-600/60">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                          <CheckCircle2 size={12} /> {matchingSkillsCount} Skills Possessed
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-200/60 dark:border-white/[0.06]">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          {matchingSkillsCount} Skills Possessed
                         </span>
                         <span className="text-slate-400">
                           {missingSkillsCount} Gaps
@@ -354,27 +347,27 @@ export default function CompaniesPage() {
                       </div>
                     </div>
 
-                    {/* Meta info tags */}
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      <span className="badge badge-gray text-[11px]">
+                    {/* Meta Info Badges */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="badge badge-gray text-[10px]">
                         <Briefcase size={10} className="mr-1" />
-                        {compRoles.length} Available Roles
+                        {compRoles.length} Open Roles
                       </span>
-                      <span className="badge badge-gray text-[11px]">
+                      <span className="badge badge-gray text-[10px]">
                         <Users size={10} className="mr-1" />
                         {company.size || '10,000+'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                  {/* Card Action */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] mt-3">
                     <button
                       onClick={() => navigate(`/companies/${company.id}`)}
-                      className="btn-primary w-full justify-center text-xs"
+                      className="btn-secondary w-full py-1.5 text-xs gap-1.5"
                     >
-                      View Details & Roles
-                      <ArrowRight size={14} />
+                      <span>Explore Roles</span>
+                      <ArrowRight size={12} />
                     </button>
                   </div>
                 </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -8,7 +7,7 @@ import {
   CheckCircle2,
   Send,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -21,7 +20,7 @@ export default function ForgotPasswordPage() {
     setError('');
 
     if (!email.trim()) {
-      setError('Email is required');
+      setError('Email address is required');
       return;
     }
 
@@ -33,15 +32,15 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        {
-          redirectTo: `${window.location.origin}/reset-password`,
-        }
-      );
-
-      if (error) throw error;
-
+      if (isSupabaseConfigured) {
+        const { error } = await supabase.auth.resetPasswordForEmail(
+          email.trim().toLowerCase(),
+          {
+            redirectTo: `${window.location.origin}/reset-password`,
+          }
+        );
+        if (error) throw error;
+      }
       setSubmitted(true);
     } catch (err) {
       setError(err.message || 'Unable to send the reset email. Please try again.');
@@ -52,28 +51,22 @@ export default function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <div className="card animate-fade-in">
-        <div className="flex flex-col items-center gap-4 py-4 text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+      <div className="card p-6 sm:p-8 animate-slide-up text-center bg-white dark:bg-[#12151B] border border-slate-200/80 dark:border-white/[0.08] shadow-sm">
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/40 flex items-center justify-center">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
 
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">
               Check your inbox
             </h2>
-
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 max-w-xs mx-auto">
-              If an account exists for this email, you'll receive a password
-              reset link at:
-            </p>
-
-            <p className="mt-1 text-sm font-semibold text-blue-600 dark:text-blue-400 break-all">
-              {email}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-xs leading-relaxed">
+              If an account exists for <span className="font-semibold text-slate-700 dark:text-slate-300">{email}</span>, you will receive password reset instructions shortly.
             </p>
           </div>
 
-          <div className="w-full space-y-2 pt-2">
+          <div className="w-full space-y-2 pt-4">
             <button
               type="button"
               onClick={() => {
@@ -81,17 +74,17 @@ export default function ForgotPasswordPage() {
                 setEmail('');
                 setError('');
               }}
-              className="btn-secondary w-full justify-center py-2.5 text-sm"
+              className="btn-secondary w-full py-2 text-xs"
             >
               Try a different email
             </button>
 
             <Link
               to="/login"
-              className="btn-primary w-full justify-center py-2.5 text-sm flex items-center gap-2"
+              className="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5"
             >
-              <ArrowLeft size={15} />
-              Back to Sign In
+              <ArrowLeft size={13} />
+              <span>Back to Sign In</span>
             </Link>
           </div>
         </div>
@@ -100,46 +93,48 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="card animate-fade-in">
+    <div className="card p-6 sm:p-8 animate-slide-up bg-white dark:bg-[#12151B] border border-slate-200/80 dark:border-white/[0.08] shadow-sm">
       <div className="mb-6">
         <Link
           to="/login"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white mb-3 transition-colors"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft size={13} />
           Back to Sign In
         </Link>
 
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          Forgot password?
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+          Reset password
         </h1>
-
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-          Enter your email and we'll send you a reset link.
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Enter your registered email address and we will send you a reset link.
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
-          <AlertCircle size={16} className="flex-shrink-0" />
-          {error}
+        <div 
+          className="mb-5 p-3 bg-rose-50 dark:bg-rose-950/30 rounded-lg border border-rose-200/80 dark:border-rose-900/50 flex items-start gap-2.5 text-rose-700 dark:text-rose-300 text-xs"
+          role="alert"
+        >
+          <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="label">Email address</label>
-
+          <label className="label" htmlFor="forgot-email">Email address</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
+              id="forgot-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input-field pl-10"
-              placeholder="you@example.com"
+              className="input-field pl-9.5 text-sm"
+              placeholder="name@example.com"
               autoComplete="email"
+              required
             />
           </div>
         </div>
@@ -147,27 +142,27 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary w-full justify-center py-3 text-base"
+          className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 mt-2"
         >
           {loading ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Sending link…
-            </span>
+            <>
+              <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span>Sending link...</span>
+            </>
           ) : (
-            <span className="flex items-center gap-2">
-              <Send size={16} />
-              Send Reset Link
-            </span>
+            <>
+              <Send size={14} />
+              <span>Send Reset Link</span>
+            </>
           )}
         </button>
       </form>
 
-      <p className="text-center text-sm text-slate-600 dark:text-slate-400 mt-6">
+      <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
         Remember your password?{' '}
         <Link
           to="/login"
-          className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+          className="text-brand-600 dark:text-brand-400 font-semibold hover:underline"
         >
           Sign in
         </Link>

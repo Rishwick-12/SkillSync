@@ -11,6 +11,7 @@ import {
   Compass,
   Briefcase,
   Layers,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,57 +20,57 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0B0D11] text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-brand-500/20">
       {/* 1. Navbar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#0B0D11]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.08]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
-              <Sparkles size={18} />
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="w-7 h-7 bg-slate-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-slate-900 shadow-sm transition-transform group-hover:scale-105">
+              <Sparkles className="w-3.5 h-3.5" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              Skill<span className="text-blue-600">Sync</span>
+            <span className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+              Skill<span className="text-brand-600 dark:text-brand-400">Sync</span>
             </span>
           </Link>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            <Link to="/" className="text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <Link to="/" className="text-slate-900 dark:text-white font-semibold">
               Home
             </Link>
-            <a href="#features" className="hover:text-blue-600 transition-colors">
+            <a href="#features" className="hover:text-slate-900 dark:hover:text-white transition-colors">
               Features
             </a>
-            <a href="#how-it-works" className="hover:text-blue-600 transition-colors">
+            <a href="#how-it-works" className="hover:text-slate-900 dark:hover:text-white transition-colors">
               How It Works
             </a>
           </nav>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {currentUser ? (
               <button
                 onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all"
+                className="btn-primary text-xs px-3.5 py-1.5"
               >
-                Go to Dashboard
-                <ArrowRight size={16} />
+                <span>Go to Dashboard</span>
+                <ArrowRight size={13} />
               </button>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="px-3.5 py-2 text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors"
+                  className="btn-ghost text-xs px-3 py-1.5"
                 >
-                  Login
+                  Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-all"
+                  className="btn-primary text-xs px-3.5 py-1.5"
                 >
-                  Get Started
-                  <ArrowRight size={14} />
+                  <span>Get Started</span>
+                  <ArrowRight size={13} />
                 </Link>
               </>
             )}
@@ -78,102 +79,110 @@ export default function HomePage() {
       </header>
 
       {/* 2. Hero Section */}
-      <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden bg-gradient-to-b from-blue-50/60 via-white to-slate-50 border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-            <Sparkles size={14} className="text-blue-600" />
-            Skill-Based Career Matching Platform
+      <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden border-b border-slate-200/80 dark:border-white/[0.08]">
+        {/* Subtle radial ambient lighting */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-brand-500/10 dark:bg-brand-500/5 blur-[120px] pointer-events-none rounded-full" />
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+            Skill-Based Career Matching & Gap Analysis
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-            Find Your Skills. <br className="hidden sm:inline" />
-            <span className="text-blue-600">Discover Your Career.</span>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold text-slate-900 dark:text-white tracking-tight leading-[1.12]">
+            Map your existing skills. <br className="hidden sm:inline" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-brand-600 to-indigo-600 dark:from-white dark:via-slate-200 dark:to-brand-400">
+              Close gaps for your target roles.
+            </span>
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            SkillSync helps students and job seekers identify suitable jobs based on their current skills, analyze requirements for dream roles, and follow step-by-step learning roadmaps.
+          <p className="text-sm sm:text-base md:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            SkillSync calculates exact compatibility between your technical abilities and hiring requirements from top engineering teams. Discover what you have, what to improve, and follow structured roadmaps.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={() => navigate(currentUser ? '/dashboard' : '/login')}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              className="btn-primary w-full sm:w-auto px-5 py-2.5 text-sm gap-2"
             >
-              Get Started
-              <ArrowRight size={18} />
+              <span>Explore Candidate Dashboard</span>
+              <ArrowRight size={15} />
             </button>
             <a
               href="#features"
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-base font-semibold transition-all flex items-center justify-center"
+              className="btn-secondary w-full sm:w-auto px-5 py-2.5 text-sm"
             >
-              Explore Features
+              Explore Capabilities
             </a>
           </div>
 
-          {/* Quick reassurance pill badges */}
-          <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 font-medium">
+          {/* Quick metrics / reassurance bar */}
+          <div className="pt-8 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs text-slate-500 dark:text-slate-400 font-medium">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={15} className="text-blue-600" /> Free & Beginner Friendly
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              100% Client-Side Engine
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={15} className="text-blue-600" /> 100% Client-Side & Private
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              Real-Time Match Calculations
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 size={15} className="text-blue-600" /> Personalized Learning Paths
+              <CheckCircle2 size={14} className="text-emerald-500" />
+              Curated 5-Phase Roadmaps
             </span>
           </div>
         </div>
       </section>
 
-      {/* 3. Three Simple Feature Cards */}
-      <section id="features" className="py-16 md:py-24 bg-white">
+      {/* 3. Three Feature Cards */}
+      <section id="features" className="py-16 md:py-24 bg-white dark:bg-[#0B0D11]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Everything You Need to Advance Your Career
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              Built for pragmatic career progression
             </h2>
-            <p className="text-sm sm:text-base text-slate-600">
-              Clear, practical tools to help you identify what you know and learn what you need.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Clear, structured tools designed to remove ambiguity from technical hiring.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Card 1: Skill Matching */}
-            <div className="p-7 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                <Target size={24} />
+            <div className="card card-hover p-6 space-y-3.5">
+              <div className="w-9 h-9 rounded-lg border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 flex items-center justify-center">
+                <Target size={18} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">
-                Skill Matching
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
+                Skill Matching Engine
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Enter your programming languages, tools, and databases to calculate real-time compatibility scores for top engineering roles.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Add your languages, frameworks, and proficiencies. Instantly compute weighted match percentages against required and preferred job specifications.
               </p>
             </div>
 
-            {/* Card 2: Career Opportunities */}
-            <div className="p-7 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                <Building2 size={24} />
+            {/* Card 2: Company Directory */}
+            <div className="card card-hover p-6 space-y-3.5">
+              <div className="w-9 h-9 rounded-lg border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 flex items-center justify-center">
+                <Building2 size={18} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">
-                Career Opportunities
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
+                Company Discovery
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Explore leading tech employers including Google, Microsoft, and Amazon. Compare required vs. preferred skills for each open position.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Explore tech companies including Google, Microsoft, and Amazon. Filter by minimum match compatibility and inspect exact hiring criteria.
               </p>
             </div>
 
             {/* Card 3: Learning Roadmaps */}
-            <div className="p-7 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                <Map size={24} />
+            <div className="card card-hover p-6 space-y-3.5">
+              <div className="w-9 h-9 rounded-lg border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 flex items-center justify-center">
+                <Map size={18} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">
-                Learning Roadmaps
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
+                Phased Roadmaps
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Follow personalized 5-phase learning roadmaps that target your exact missing skills, with curated documentation and practice tutorials.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Generate personalized five-phase roadmaps from Fundamentals to System Design and Mock Interviews, targeting your exact missing skills.
               </p>
             </div>
           </div>
@@ -181,106 +190,106 @@ export default function HomePage() {
       </section>
 
       {/* 4. Three-Step How It Works Section */}
-      <section id="how-it-works" className="py-16 md:py-24 bg-slate-50 border-t border-slate-200">
+      <section id="how-it-works" className="py-16 md:py-24 bg-[#F9FAFB] dark:bg-[#0E1015] border-t border-slate-200/80 dark:border-white/[0.08]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
-              Simple 3-Step Process
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+              Workflow
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
               How SkillSync Works
             </h2>
-            <p className="text-sm sm:text-base text-slate-600">
-              Get matched with ideal roles and close your skill gaps in three easy steps.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              From inventory to interview readiness in three seamless steps.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Step 1 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-base flex items-center justify-center">
-                1
+            <div className="card p-5 space-y-3">
+              <div className="w-7 h-7 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-mono font-semibold text-xs flex items-center justify-center">
+                01
               </div>
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Add Your Skills
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Choose the languages and frameworks you already know, and set your proficiency level from Beginner to Advanced.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Catalog your languages, tools, and databases with verified proficiency levels from Beginner to Advanced.
               </p>
             </div>
 
             {/* Step 2 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-base flex items-center justify-center">
-                2
+            <div className="card p-5 space-y-3">
+              <div className="w-7 h-7 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-mono font-semibold text-xs flex items-center justify-center">
+                02
               </div>
-              <h3 className="text-lg font-bold text-slate-900">
-                See Your Matches
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Inspect Gaps & Overlap
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Instantly view compatible roles and discover which skills you have, which need improvement, and which are missing.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Review automated categorizations: Skills You Have, Skills to Improve, and Critical Missing Requirements.
               </p>
             </div>
 
             {/* Step 3 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-base flex items-center justify-center">
-                3
+            <div className="card p-5 space-y-3">
+              <div className="w-7 h-7 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-mono font-semibold text-xs flex items-center justify-center">
+                03
               </div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Follow Your Roadmap
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Execute Your Curriculum
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Generate a custom 5-phase learning curriculum to master missing concepts and track your milestones until you are interview-ready.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Check off milestone tasks, track estimated duration, and save roadmaps directly to your local workspace.
               </p>
             </div>
           </div>
 
-          {/* CTA Box */}
-          <div className="mt-12 p-8 rounded-2xl bg-blue-600 text-white text-center space-y-4 shadow-md">
-            <h3 className="text-2xl font-bold">
-              Ready to find your best career match?
+          {/* Minimalist CTA Banner */}
+          <div className="card p-8 text-center space-y-4 border border-brand-200/80 dark:border-brand-900/40 bg-gradient-to-b from-brand-50/40 to-transparent dark:from-brand-950/20 dark:to-transparent">
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">
+              Ready to assess your career readiness?
             </h3>
-            <p className="text-blue-100 text-sm max-w-xl mx-auto">
-              Start building your skills profile today. Explore roles and unlock tailored learning paths in minutes.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              Start building your profile today. Access the full feature suite with instant demo login.
             </p>
             <div className="pt-2">
               <button
                 onClick={() => navigate(currentUser ? '/dashboard' : '/login')}
-                className="px-6 py-3 rounded-xl bg-white hover:bg-blue-50 text-blue-700 font-bold text-sm shadow transition-all inline-flex items-center gap-2"
+                className="btn-primary text-xs px-4 py-2 gap-1.5"
               >
-                Get Started with Demo
-                <ArrowRight size={16} />
+                <span>Launch Interactive Demo</span>
+                <ArrowRight size={14} />
               </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. Simple Footer */}
-      <footer className="mt-auto bg-white border-t border-slate-200 py-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      {/* 5. Minimal Footer */}
+      <footer className="mt-auto border-t border-slate-200/80 dark:border-white/[0.08] py-6 bg-white dark:bg-[#0B0D11]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
+            <div className="w-5 h-5 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold flex items-center justify-center text-[10px]">
               S
             </div>
-            <span className="font-bold text-slate-800">SkillSync</span>
-            <span>— Skill-Based Career Matching Platform</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">SkillSync</span>
+            <span className="text-slate-400 dark:text-slate-500">· Skill-Based Career Matching</span>
           </div>
 
-          <div className="flex items-center gap-6 font-medium">
-            <Link to="/" className="hover:text-blue-600 transition-colors">
+          <div className="flex items-center gap-5">
+            <Link to="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">
               Home
             </Link>
-            <Link to="/login" className="hover:text-blue-600 transition-colors">
+            <Link to="/login" className="hover:text-slate-900 dark:hover:text-white transition-colors">
               Sign In
             </Link>
-            <Link to="/dashboard" className="hover:text-blue-600 transition-colors">
+            <Link to="/dashboard" className="hover:text-slate-900 dark:hover:text-white transition-colors">
               Dashboard
             </Link>
           </div>
 
-          <p>© {new Date().getFullYear()} SkillSync. Demo Frontend Application.</p>
+          <p className="font-mono text-[11px]">© {new Date().getFullYear()} SkillSync Frontend</p>
         </div>
       </footer>
     </div>
